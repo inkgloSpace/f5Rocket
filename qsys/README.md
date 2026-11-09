@@ -1,10 +1,48 @@
 # Q-SYS workspace
 
-This directory now contains the first standalone Q-SYS compatibility probe. It is intentionally not a port of the browser game.
+This directory contains the modular source, deterministic build tool, installable distribution, and test evidence for the first f5Rocket Q-SYS compatibility probe. It is intentionally not a port of the browser game.
+
+## Directory ownership
+
+```text
+qsys/plugin/   editable Q-SYS Lua source; this is the source of truth
+qsys/dist/     generated Designer-installable plugin
+qsys/tools/    dependency-free build tooling
+qsys/compat/   compatibility fixture, procedure, and result records
+```
+
+The source uses conventional Q-SYS/QSC `--[[ #include "file.lua" ]]` directives. This keeps the files usable with include-aware split-plugin workflows such as Qanvas while producing the single `.qplug` file expected by Q-SYS Designer. These directives are compile-time composition, not runtime Lua `require()` or filesystem access.
+
+## Build
+
+From the repository root:
+
+```bash
+cd ~/Desktop/f5Rocket
+python3 qsys/tools/build.py
+```
+
+The build starts at `qsys/plugin/plugin.lua`, resolves includes relative to their containing files, and writes `qsys/dist/f5Rocket_Compat.qplug`. It detects missing files and circular includes and emits deterministic output without timestamps.
+
+**Never manually edit `qsys/dist/f5Rocket_Compat.qplug`.** Change the modular files under `qsys/plugin/`, rebuild, inspect the generated diff, and commit both source and distribution artifact.
+
+## Source modules
+
+- `plugin.lua`: small entry point and include graph
+- `info.lua`: stable plugin identity and metadata
+- `pages.lua`: `Probe` page population
+- `properties.lua`: intentionally empty design-time property population
+- `controls.lua`: viewport, operator controls, and diagnostic readouts
+- `layout.lua`: panel graphics and control layout only
+- `compat.lua`: fixture data, probe constants, and conservative SVG construction
+- `runtime.lua`: Timer, event handlers, telemetry, Legend encoding, and `IconData` assignment
+
+Opening a file under `qsys/plugin/` in Qanvas should allow its split-plugin workflow to locate the sibling `plugin.lua` entry point and follow the standard include graph. No custom module loader is used.
 
 ## Compatibility plugin
 
-- Plugin: [`f5Rocket_Compat.qplug`](f5Rocket_Compat.qplug)
+- Distribution: [`dist/f5Rocket_Compat.qplug`](dist/f5Rocket_Compat.qplug)
+- Source entry point: [`plugin/plugin.lua`](plugin/plugin.lua)
 - Page: `Probe`
 - Plugin name: `f5Rocket~Compatibility Probe`
 - Version: `0.1.0`
@@ -26,8 +64,8 @@ It contains one 16×16 test PNG, rendered at 32×32 logical pixels and moved hor
 
 ## Install in Q-SYS Designer
 
-1. Close any older copy of this probe in Q-SYS Designer.
-2. Copy `f5Rocket_Compat.qplug` into the user plugin directory under `Documents/QSC/Q-Sys Designer/Plugins/`, or double-click the `.qplug` file for manual installation if that behavior is enabled on the workstation.
+1. Build the distribution and close any older copy of the probe in Q-SYS Designer.
+2. Copy `qsys/dist/f5Rocket_Compat.qplug` into the user plugin directory under `Documents/QSC/Q-Sys Designer/Plugins/`, or double-click the `.qplug` file if manual installation is enabled on the workstation.
 3. Start or restart Q-SYS Designer so it reloads user plugins.
 4. Find **f5Rocket > Compatibility Probe** under the User plugins category and drag it into a new design.
 5. Open its control panel and select the `Probe` page.
@@ -48,6 +86,6 @@ Detailed test steps and a blank results table are in [`compat/README.md`](compat
 
 ## Later plugin work
 
-Only after this probe is recorded in Designer and on a Core should the project start the real game `.qplug`. The eventual plugin can then add properties, controls, Lua game state, bounded pools, and the full renderer based on verified syntax/rate/payload constraints.
+Only after this probe is recorded in Designer and on a Core should the real game plugin be split further. Likely future modules include `game/state.lua`, `game/player.lua`, `game/enemies.lua`, `game/bullets.lua`, `game/collision.lua`, `renderer/svg.lua`, and `renderer/assets.lua`.
 
 Browser results remain relative scene diagnostics; they are not Q-SYS Core performance evidence.

@@ -6,4 +6,6 @@ __pycache__/
 .vscode/
 node_modules/
 dist/
+!qsys/dist/
+!qsys/dist/f5Rocket_Compat.qplug
 *.log

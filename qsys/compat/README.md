@@ -1,8 +1,10 @@
 # f5Rocket Q-SYS compatibility probe
 
-This directory contains the deterministic test asset and test procedure for [`../f5Rocket_Compat.qplug`](../f5Rocket_Compat.qplug). The probe answers one question: can Q-SYS reliably display and refresh a PNG embedded in a dynamically generated SVG through one Button's `IconData` at approximately 30 Hz?
+This directory contains the deterministic test asset and test procedure for the generated [`../dist/f5Rocket_Compat.qplug`](../dist/f5Rocket_Compat.qplug). The probe answers one question: can Q-SYS reliably display and refresh a PNG embedded in a dynamically generated SVG through one Button's `IconData` at approximately 30 Hz?
 
 It is not the game plugin.
+
+The editable source lives under [`../plugin/`](../plugin/), with [`../plugin/plugin.lua`](../plugin/plugin.lua) as its include-based entry point. Rebuild the distribution with `python3 qsys/tools/build.py`; never edit the generated `.qplug` manually.
 
 ## Fixture
 
