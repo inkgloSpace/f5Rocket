@@ -1,44 +1,53 @@
-# Future Q-SYS workspace
+# Q-SYS workspace
 
-This directory is reserved for the future Q-SYS plugin. Phase 1 intentionally contains no `.qplug` implementation: browser gameplay should remain easy to iterate while the first Core/Designer compatibility assumptions are still unverified.
+This directory now contains the first standalone Q-SYS compatibility probe. It is intentionally not a port of the browser game.
 
-The exact transformation and conservative SVG template for the first probe are documented in [`compat/README.md`](compat/README.md).
+## Compatibility plugin
 
-## Planned plugin structure
+- Plugin: [`f5Rocket_Compat.qplug`](f5Rocket_Compat.qplug)
+- Page: `Probe`
+- Plugin name: `f5Rocket~Compatibility Probe`
+- Version: `0.1.0`
+- Stable repository-specific ID: `3c2b6895-8b9b-5d60-9f5f-12f94d8c46f9`
+- Viewport control: `Viewport`
 
-The future `.qplug` will define the standard pieces explicitly:
-
-- `PluginInfo` for identity, version, and metadata
-- `GetProperties` for configurable timing/debug options
-- `GetControls` for one game viewport Button plus only necessary operator controls
-- `GetPages` for the plugin UI page definition
-- `GetControlLayout` for the portrait viewport and supporting controls
-- runtime Lua containing simple game-state tables, fixed-step updates, pooling, and SVG generation
-- one primary 320×480 game viewport Button
-- dynamic Button `IconData`, updated from a serialized/Base64 SVG scene
-- a deliberate PNG-in-SVG compatibility result before committing to the full asset pipeline
-- a Q-SYS `Timer` targeting approximately 30 Hz, with 20 Hz and 15 Hz fallback tests
-
-The Lua state and renderer should remain separate, matching `src/game.js` and `src/renderer-svg.js`. The runtime should use arrays/tables, explicit loops, integer sprite placement, simple transforms, and bounded pools.
-
-## First Q-SYS milestone: compatibility probe
-
-Build only this vertical slice:
+The plugin isolates this path:
 
 ```text
-1 player PNG
-→ embedded in a dynamically generated 320×480 SVG
-→ moved each timer tick at approximately 30 Hz
-→ SVG serialized and Base64-encoded
-→ displayed through one Button's IconData
+cached Base64 PNG
+→ data:image/png;base64,...
+→ runtime-generated 320×480 SVG
+→ Base64 SVG
+→ rapidjson Button Legend
+→ Viewport.IconData
 ```
 
-Measure and record:
+It contains one 16×16 test PNG, rendered at 32×32 logical pixels and moved horizontally by integer Lua coordinates. No runtime file access, network access, PNG encoding, game state, enemies, bullets, collision, or scoring is present.
 
-1. Whether the target Q-SYS version accepts the selected PNG reference form inside SVG (data URI or another supported representation).
-2. Whether dynamic `IconData` refreshes reliably at approximately 30 Hz.
-3. Core CPU impact, Lua execution time, memory behavior, and practical SVG/Base64 payload size.
-4. Visual crispness and coordinate parity at 320×480.
-5. Behavior at 20 Hz and 15 Hz before choosing the production update/render rate.
+## Install in Q-SYS Designer
 
-Browser results are useful for relative scene-size comparisons only; they are not Q-SYS Core performance evidence.
+1. Close any older copy of this probe in Q-SYS Designer.
+2. Copy `f5Rocket_Compat.qplug` into the user plugin directory under `Documents/QSC/Q-Sys Designer/Plugins/`, or double-click the `.qplug` file for manual installation if that behavior is enabled on the workstation.
+3. Start or restart Q-SYS Designer so it reloads user plugins.
+4. Find **f5Rocket > Compatibility Probe** under the User plugins category and drag it into a new design.
+5. Open its control panel and select the `Probe` page.
+6. Emulate the design for an initial functional check.
+7. Repeat the complete matrix on a physical Core; Designer Emulate success is not a substitute for a Core result.
+
+Detailed test steps and a blank results table are in [`compat/README.md`](compat/README.md).
+
+## What the controls test
+
+- `Run` starts/stops one persistent Q-SYS Timer.
+- `Rate` switches the same timer between exact intervals `1/30`, `1/20`, and `1/15` seconds.
+- `ImageSyntax` changes only the SVG namespace/image attribute between `href` and `xlink:href`.
+- `Reset` stops the timer, restores x=0 and counters, and renders one known initial frame while preserving rate and syntax.
+- `RequestedHz` and `MeasuredHz` compare the selected interval with successful render ticks measured using `Timer.Now()`.
+- `SvgBytes` and `SvgBase64Bytes` report the exact strings used in the current Legend update.
+- `LastRenderMs` uses `os.clock()` and is CPU/process-time diagnostic data, not wall-clock frame latency.
+
+## Later plugin work
+
+Only after this probe is recorded in Designer and on a Core should the project start the real game `.qplug`. The eventual plugin can then add properties, controls, Lua game state, bounded pools, and the full renderer based on verified syntax/rate/payload constraints.
+
+Browser results remain relative scene diagnostics; they are not Q-SYS Core performance evidence.
