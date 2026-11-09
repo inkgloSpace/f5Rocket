@@ -22,7 +22,28 @@ table.insert(controls, {
 })
 
 table.insert(controls, {
+  Name = "RenderMode",
+  ControlType = "Text",
+  DefaultValue = "INLINE",
+  Count = 1
+})
+
+table.insert(controls, {
+  Name = "InstanceCount",
+  ControlType = "Text",
+  DefaultValue = "16",
+  Count = 1
+})
+
+table.insert(controls, {
   Name = "ImageSyntax",
+  ControlType = "Text",
+  DefaultValue = "href",
+  Count = 1
+})
+
+table.insert(controls, {
+  Name = "UseSyntax",
   ControlType = "Text",
   DefaultValue = "href",
   Count = 1
@@ -75,6 +96,13 @@ table.insert(controls, {
   Name = "SvgBase64Bytes",
   ControlType = "Text",
   DefaultValue = "0",
+  Count = 1
+})
+
+table.insert(controls, {
+  Name = "PayloadSavings",
+  ControlType = "Text",
+  DefaultValue = "0.0 %",
   Count = 1
 })
 

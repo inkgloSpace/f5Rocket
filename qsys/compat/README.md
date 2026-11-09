@@ -1,10 +1,10 @@
-# f5Rocket Q-SYS compatibility probe
+# f5Rocket Q-SYS sprite-reuse compatibility benchmark
 
-This directory contains the deterministic test asset and test procedure for the generated [`../dist/f5Rocket_Compat.qplug`](../dist/f5Rocket_Compat.qplug). The probe answers one question: can Q-SYS reliably display and refresh a PNG embedded in a dynamically generated SVG through one Button's `IconData` at approximately 30 Hz?
+This directory contains the deterministic fixture and test procedure for the generated [`../dist/f5Rocket_Compat.qplug`](../dist/f5Rocket_Compat.qplug). The editable source lives under [`../plugin/`](../plugin/), with [`../plugin/plugin.lua`](../plugin/plugin.lua) as its include-based entry point.
 
-It is not the game plugin.
+The baseline `<image href="data:image/png;base64,...">` path is confirmed working in Q-SYS Designer 10.5.0 at approximately 30 Hz. This benchmark asks whether the same renderer supports one PNG in `<defs>` followed by repeated `<use>` instances, and whether the resulting payload reduction remains stable during dynamic `IconData` refresh.
 
-The editable source lives under [`../plugin/`](../plugin/), with [`../plugin/plugin.lua`](../plugin/plugin.lua) as its include-based entry point. Rebuild the distribution with `python3 qsys/tools/build.py`; never edit the generated `.qplug` manually.
+This is not the game plugin.
 
 ## Fixture
 
@@ -17,58 +17,81 @@ The editable source lives under [`../plugin/`](../plugin/), with [`../plugin/plu
 - Runtime display size: 32×32 logical pixels
 - Classification: **COMPATIBILITY TEST ASSET — NOT PRODUCTION ART**
 
-The plugin includes the complete Base64 PNG as a Lua constant and does not read this file at runtime. The separate PNG exists only for visual inspection and reproducibility.
+The plugin includes the byte-identical Base64 PNG as a Lua constant. It never reads, regenerates, decodes, or re-encodes the PNG at runtime.
 
-## Exact runtime transformation
+## Render strategies
+
+`RenderMode = INLINE` is the known-good control. It repeats the complete data URI for every instance:
+
+```xml
+<g transform="translate(OFFSET 0)">
+  <image href="data:image/png;base64,..." x="18" y="88" width="32" height="32" preserveAspectRatio="none"/>
+  ...
+</g>
+```
+
+`ImageSyntax` retains the earlier `href` versus `xlink:href` image test. Keep it at `href` for the validated baseline.
+
+`RenderMode = DEFS+USE` stores the PNG once and references it from every instance:
+
+```xml
+<defs>
+  <image id="compatSprite" href="data:image/png;base64,..." width="32" height="32" preserveAspectRatio="none"/>
+</defs>
+<g transform="translate(OFFSET 0)">
+  <use href="#compatSprite" x="18" y="88"/>
+  ...
+</g>
+```
+
+The definition always uses the already validated PNG `href` syntax. `UseSyntax` changes only the reference nodes:
+
+- `href` emits `<use href="#compatSprite" .../>` without an xlink namespace.
+- `xlink:href` adds `xmlns:xlink="http://www.w3.org/1999/xlink"` and emits `<use xlink:href="#compatSprite" .../>`.
+
+Use `xlink:href` only if Q-SYS rejects `<use href>`. `UseSyntax` has no effect in `INLINE` mode.
+
+## Layout and animation
+
+`InstanceCount` supports `1`, `8`, `16`, `32`, and `64`. Instances occupy a deterministic eight-column grid. At the maximum count and motion offset, the rightmost sprite ends at logical x=318 and the lowest sprite ends at logical y=400, inside the 320×480 viewport.
+
+The grid is cached when configuration changes. Every timer tick changes one integer `motionOffset` from 0 through 16 and inserts it into the parent group transform, so `IconData` continues changing without rebuilding individual positions.
+
+## Payload telemetry
+
+The runtime path remains:
 
 ```text
-PNG bytes (generated once outside Q-SYS)
-→ cached Base64 PNG Lua constant
-→ data:image/png;base64,...
-→ embedded inside SVG <image>
-→ complete runtime SVG string
+cached scene fragments + current motionOffset
+→ one SVG string
 → Crypto.Base64Encode(svg) once
-→ reused for payload diagnostics and IconData
-→ rapidjson-encoded Button Legend
+→ SvgBytes / SvgBase64Bytes
+→ rapidjson-encoded reusable Button Legend
 → Controls.Viewport.Legend
 ```
 
-The centralized assignment is equivalent to:
+`PayloadSavings` is the raw-byte reduction of DEFS+USE compared with INLINE at the same instance count, using motion offset zero and the selected syntax controls. The comparison is rebuilt only when configuration changes or Reset occurs, never on every timer tick.
 
-```lua
-local encodedSvg = Crypto.Base64Encode(svg)
-ProbeLegend.IconData = encodedSvg
-Controls.Viewport.Legend = rapidjson.encode(ProbeLegend)
-```
+Q-SYS debug output also reports the expected PNG payload occurrence count. INLINE has one occurrence per instance; DEFS+USE has exactly one.
 
-`ProbeLegend.DrawChrome` is set to `false` once.
+## Static payload benchmark
 
-## Syntax modes
+These values use the exact version 0.2.0 SVG structure, `href` for both image and use syntax, and motion offset zero. A two-digit live offset adds one raw byte; the live telemetry is authoritative for the current frame.
 
-`ImageSyntax = href` emits no xlink namespace and uses:
+| Mode | Instances | Raw SVG bytes | Base64 SVG bytes | PNG Base64 occurrences | Raw savings vs INLINE |
+|---|---:|---:|---:|---:|---:|
+| INLINE | 1 | 789 | 1,052 | 1 | — |
+| INLINE | 8 | 2,992 | 3,992 | 8 | — |
+| INLINE | 16 | 5,517 | 7,356 | 16 | — |
+| INLINE | 32 | 10,567 | 14,092 | 32 | — |
+| INLINE | 64 | 20,667 | 27,556 | 64 | — |
+| DEFS+USE | 1 | 847 | 1,132 | 1 | -7.4% |
+| DEFS+USE | 8 | 1,139 | 1,520 | 1 | 61.9% |
+| DEFS+USE | 16 | 1,480 | 1,976 | 1 | 73.2% |
+| DEFS+USE | 32 | 2,162 | 2,884 | 1 | 79.5% |
+| DEFS+USE | 64 | 3,526 | 4,704 | 1 | 82.9% |
 
-```xml
-<image href="data:image/png;base64,..." x="0" y="0" width="32" height="32" preserveAspectRatio="none"/>
-```
-
-`ImageSyntax = xlink:href` adds this to the root:
-
-```xml
-xmlns:xlink="http://www.w3.org/1999/xlink"
-```
-
-and emits:
-
-```xml
-<image xlink:href="data:image/png;base64,..." x="0" y="0" width="32" height="32" preserveAspectRatio="none"/>
-```
-
-Everything else in the SVG remains equivalent. This comparison determines which form the Q-SYS SVG renderer accepts on the tested QDS/Core version.
-
-For the known initial x=0 frame generated by version 0.1.0:
-
-- `href`: 789 raw SVG bytes, 1,052 Base64 SVG bytes
-- `xlink:href`: 838 raw SVG bytes, 1,120 Base64 SVG bytes
+The one-instance DEFS+USE scene is larger because `<defs>` adds fixed overhead. Reuse becomes increasingly advantageous as instance count grows.
 
 ## Timing modes
 
@@ -80,45 +103,43 @@ One globally scoped `ProbeTimer = Timer.New()` is created at startup. The select
 
 `MeasuredHz` counts successful render ticks over approximately one-second windows measured with `Timer.Now()`. `LastRenderMs` uses `os.clock()`, which reports CPU/process-time semantics and must not be interpreted as precise wall-clock frame latency.
 
-## Manual test procedure
+## Q-SYS test sequence
 
-1. Install the plugin using the steps in [`../README.md`](../README.md).
-2. Open the `Probe` page and confirm the initial state is `IDLE`, x=0 is rendered, TickCount is `0`, and the fixture is visible.
-3. Select `href` and `30 Hz`, then enable `Run` for at least 30 seconds.
-4. Record visibility, motion stability, requested/measured rate, raw/Base64 bytes, render-time behavior, and observed CPU impact.
-5. While running, change to `20 Hz` and then `15 Hz`; confirm the timer updates without duplicate motion or runaway ticks.
-6. Disable `Run`, press `Reset`, and confirm the position/counters return to their initial values while the selected rate/syntax remain selected.
-7. Repeat steps 3–6 with `xlink:href`.
-8. Repeat the complete matrix in Designer Emulate and on a physical Core.
-9. Watch Q-SYS debug output for `[f5Rocket Compat] Render error:` and copy any full error text into Notes.
+1. Build and install the plugin using [`../README.md`](../README.md).
+2. Open `Probe`; confirm defaults are `INLINE`, `16`, image `href`, use `href`, rate `30 Hz`, and status `IDLE`.
+3. Run `INLINE / 1 / 30 Hz` for at least 30 seconds. Record visibility, stable motion, measured rate, payloads, render time, and CPU observation.
+4. Repeat INLINE at `16`, `32`, and `64` instances.
+5. Select `DEFS+USE` with `UseSyntax = href`; repeat counts `1`, `16`, `32`, and `64` at 30 Hz.
+6. Confirm DEFS+USE shows every requested sprite, all instances move together, and its PNG payload count in debug output is one.
+7. Compare `SvgBytes`, `SvgBase64Bytes`, and `PayloadSavings` with the static table. Small size changes from a two-digit offset are expected.
+8. Only if `<use href>` fails, change `UseSyntax` to `xlink:href` and repeat the failing case.
+9. After the 30 Hz matrix, use 20 Hz and 15 Hz to distinguish syntax/rendering failure from update-rate pressure.
+10. Press Reset and confirm motion, ticks, and measurement counters reset while selected mode/count/syntax/rate remain selected.
+11. Watch debug output for `[f5Rocket Compat] Render error:` and preserve the full error text.
+12. Repeat successful Designer tests on a physical Core.
 
-## Results table
+## Results
 
-Leave one row for every environment/rate/syntax combination tested.
+Primary validation uses 30 Hz and PNG `ImageSyntax = href`. Fill the xlink rows only if `<use href>` fails.
 
-| Environment | QDS/Core version | Syntax | Requested Hz | Measured Hz | Sprite visible | Motion stable | Raw SVG bytes | Base64 bytes | CPU observation | Notes |
-|---|---|---|---:|---:|---|---|---:|---:|---|---|
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |  |  |  |
+| Environment | QDS/Core version | Mode | Use syntax | Instances | Requested Hz | Measured Hz | All sprites visible | Motion stable | Raw SVG bytes | Base64 bytes | Savings | CPU observation | Notes |
+|---|---|---|---|---:|---:|---:|---|---|---:|---:|---:|---|---|
+|  |  | INLINE | N/A | 1 | 30 |  |  |  |  |  | N/A |  |  |
+|  |  | INLINE | N/A | 16 | 30 |  |  |  |  |  | N/A |  |  |
+|  |  | INLINE | N/A | 32 | 30 |  |  |  |  |  | N/A |  |  |
+|  |  | INLINE | N/A | 64 | 30 |  |  |  |  |  | N/A |  |  |
+|  |  | DEFS+USE | href | 1 | 30 |  |  |  |  |  |  |  |  |
+|  |  | DEFS+USE | href | 16 | 30 |  |  |  |  |  |  |  |  |
+|  |  | DEFS+USE | href | 32 | 30 |  |  |  |  |  |  |  |  |
+|  |  | DEFS+USE | href | 64 | 30 |  |  |  |  |  |  |  |  |
 
 ## Success criteria
 
-The minimum result needed before game-plugin work is:
+- INLINE remains visible and stable at the known-good 30 Hz baseline.
+- DEFS+USE displays every requested instance using at least one use-reference syntax.
+- The entire group moves without missing, duplicated, or stale sprites.
+- TickCount and measured rate continue without stalls.
+- Payload reduction follows the expected trend without runaway CPU behavior.
+- Reset and runtime configuration changes work without creating another timer.
 
-- The sprite is visible using at least one syntax.
-- Motion remains stable at one tested update rate.
-- TickCount and measured rate continue advancing without stalls.
-- Payload and CPU observations do not show obvious runaway behavior.
-- Reset and runtime rate/syntax changes work without reinstalling or editing the plugin.
-
-Designer Emulate success does not replace a physical Core test. Only Q-SYS testing can establish accepted SVG syntax, actual `IconData` refresh behavior, Core CPU impact, timer scheduling stability, and practical payload limits.
+Designer success does not replace a physical Core test. Only Q-SYS testing can establish `<use>` support, actual `IconData` refresh behavior, Core CPU impact, timer stability, and practical payload limits.

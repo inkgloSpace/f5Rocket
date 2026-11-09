@@ -1,10 +1,11 @@
 local rapidjson = require("rapidjson")
 
-local spriteX = 0
-local spriteDirection = 1
+local motionOffset = MOTION_MIN
+local motionDirection = 1
 local tickCount = 0
 local measurementTicks = 0
 local measurementStartedAt = 0
+local activeScene = nil
 
 -- Reuse this table; only IconData changes per rendered frame.
 ProbeLegend = {
@@ -22,11 +23,32 @@ local function SelectedRate()
   return Controls.Rate.String
 end
 
-local function SelectedSyntax()
+local function SelectedRenderMode()
+  if Controls.RenderMode.String ~= "INLINE" and Controls.RenderMode.String ~= "DEFS+USE" then
+    Controls.RenderMode.String = "INLINE"
+  end
+  return Controls.RenderMode.String
+end
+
+local function SelectedInstanceCount()
+  if INSTANCE_COUNT_VALUES[Controls.InstanceCount.String] == nil then
+    Controls.InstanceCount.String = "16"
+  end
+  return INSTANCE_COUNT_VALUES[Controls.InstanceCount.String]
+end
+
+local function SelectedImageSyntax()
   if Controls.ImageSyntax.String ~= "href" and Controls.ImageSyntax.String ~= "xlink:href" then
     Controls.ImageSyntax.String = "href"
   end
   return Controls.ImageSyntax.String
+end
+
+local function SelectedUseSyntax()
+  if Controls.UseSyntax.String ~= "href" and Controls.UseSyntax.String ~= "xlink:href" then
+    Controls.UseSyntax.String = "href"
+  end
+  return Controls.UseSyntax.String
 end
 
 local function UpdateRequestedHz()
@@ -35,11 +57,43 @@ local function UpdateRequestedHz()
 end
 
 local function RunningStatus()
-  return "RUNNING " .. string.upper(SelectedRate()) .. " / " .. SelectedSyntax()
+  return "RUNNING " .. string.upper(SelectedRate()) .. " / " ..
+    SelectedRenderMode() .. " / " .. tostring(SelectedInstanceCount())
+end
+
+local function RefreshSceneCache()
+  local renderMode = SelectedRenderMode()
+  local instanceCount = SelectedInstanceCount()
+  local imageSyntax = SelectedImageSyntax()
+  local useSyntax = SelectedUseSyntax()
+
+  activeScene = PrepareCompatScene(renderMode, instanceCount, imageSyntax, useSyntax)
+
+  local savings, inlineBytes, reuseBytes = CalculatePayloadSavings(
+    instanceCount,
+    imageSyntax,
+    useSyntax
+  )
+  Controls.PayloadSavings.String = string.format("%.1f %%", savings)
+
+  local pngOccurrences = 1
+  if renderMode == "INLINE" then
+    pngOccurrences = instanceCount
+  end
+
+  print(string.format(
+    "[f5Rocket Compat] %s / %d: INLINE %d bytes, DEFS+USE %d bytes, savings %.1f%%, PNG payloads %d",
+    renderMode,
+    instanceCount,
+    inlineBytes,
+    reuseBytes,
+    savings,
+    pngOccurrences
+  ))
 end
 
 local function RenderFrameUnsafe()
-  local svg = BuildCompatSvg(spriteX, SelectedSyntax())
+  local svg = BuildCompatSvg(activeScene, motionOffset)
   local encodedSvg = Crypto.Base64Encode(svg)
 
   ProbeLegend.IconData = encodedSvg
@@ -94,13 +148,14 @@ end
 local function ResetProbe()
   ProbeTimer:Stop()
   Controls.Run.Boolean = false
-  spriteX = 0
-  spriteDirection = 1
+  motionOffset = MOTION_MIN
+  motionDirection = 1
   tickCount = 0
   measurementTicks = 0
   measurementStartedAt = Timer.Now()
 
   UpdateRequestedHz()
+  RefreshSceneCache()
   Controls.MeasuredHz.String = "0.0 Hz"
   Controls.TickCount.String = "0"
 
@@ -124,26 +179,27 @@ local function ApplyRateChange()
   end
 end
 
-local function ApplySyntaxChange()
+local function ApplyRenderConfigurationChange()
+  RefreshSceneCache()
   if RenderFrame() and Controls.Run.Boolean then
     Controls.Status.String = RunningStatus()
   end
 end
 
-local function UpdateSpritePosition()
-  spriteX = spriteX + spriteDirection * SPRITE_STEP
+local function UpdateMotionOffset()
+  motionOffset = motionOffset + motionDirection * MOTION_STEP
 
-  if spriteX >= MAX_SPRITE_X then
-    spriteX = MAX_SPRITE_X
-    spriteDirection = -1
-  elseif spriteX <= 0 then
-    spriteX = 0
-    spriteDirection = 1
+  if motionOffset >= MOTION_MAX then
+    motionOffset = MOTION_MAX
+    motionDirection = -1
+  elseif motionOffset <= MOTION_MIN then
+    motionOffset = MOTION_MIN
+    motionDirection = 1
   end
 end
 
 ProbeTimer.EventHandler = function()
-  UpdateSpritePosition()
+  UpdateMotionOffset()
 
   if not RenderFrame() then
     return
@@ -175,9 +231,24 @@ Controls.Rate.EventHandler = function()
   ApplyRateChange()
 end
 
+Controls.RenderMode.EventHandler = function()
+  SelectedRenderMode()
+  ApplyRenderConfigurationChange()
+end
+
+Controls.InstanceCount.EventHandler = function()
+  SelectedInstanceCount()
+  ApplyRenderConfigurationChange()
+end
+
 Controls.ImageSyntax.EventHandler = function()
-  SelectedSyntax()
-  ApplySyntaxChange()
+  SelectedImageSyntax()
+  ApplyRenderConfigurationChange()
+end
+
+Controls.UseSyntax.EventHandler = function()
+  SelectedUseSyntax()
+  ApplyRenderConfigurationChange()
 end
 
 Controls.Reset.EventHandler = function(control)
@@ -187,7 +258,13 @@ Controls.Reset.EventHandler = function(control)
 end
 
 Controls.Rate.Choices = RATE_CHOICES
-Controls.ImageSyntax.Choices = SYNTAX_CHOICES
+Controls.RenderMode.Choices = RENDER_MODE_CHOICES
+Controls.InstanceCount.Choices = INSTANCE_COUNT_CHOICES
+Controls.ImageSyntax.Choices = IMAGE_SYNTAX_CHOICES
+Controls.UseSyntax.Choices = USE_SYNTAX_CHOICES
 SelectedRate()
-SelectedSyntax()
+SelectedRenderMode()
+SelectedInstanceCount()
+SelectedImageSyntax()
+SelectedUseSyntax()
 ResetProbe()

@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket~Compatibility Probe",
-  Version = "0.1.0",
-  BuildVersion = "0.1.0.0",
+  Version = "0.2.0",
+  BuildVersion = "0.2.0.0",
   Id = "3c2b6895-8b9b-5d60-9f5f-12f94d8c46f9",
   Author = "inkgloSpace",
   Description = "PNG-in-SVG dynamic IconData compatibility probe for f5Rocket"
@@ -69,7 +69,28 @@ function GetControls(props)
   })
 
   table.insert(controls, {
+    Name = "RenderMode",
+    ControlType = "Text",
+    DefaultValue = "INLINE",
+    Count = 1
+  })
+
+  table.insert(controls, {
+    Name = "InstanceCount",
+    ControlType = "Text",
+    DefaultValue = "16",
+    Count = 1
+  })
+
+  table.insert(controls, {
     Name = "ImageSyntax",
+    ControlType = "Text",
+    DefaultValue = "href",
+    Count = 1
+  })
+
+  table.insert(controls, {
+    Name = "UseSyntax",
     ControlType = "Text",
     DefaultValue = "href",
     Count = 1
@@ -126,6 +147,13 @@ function GetControls(props)
   })
 
   table.insert(controls, {
+    Name = "PayloadSavings",
+    ControlType = "Text",
+    DefaultValue = "0.0 %",
+    Count = 1
+  })
+
+  table.insert(controls, {
     Name = "LastRenderMs",
     ControlType = "Text",
     DefaultValue = "0.000 ms CPU",
@@ -144,9 +172,9 @@ function GetControlLayout(props)
   if currentPage == 1 then
     table.insert(graphics, {
       Type = "Header",
-      Text = "f5Rocket PNG-in-SVG / IconData Probe",
+      Text = "f5Rocket SVG Sprite Reuse / IconData Benchmark",
       Position = { 8, 8 },
-      Size = { 532, 24 },
+      Size = { 580, 24 },
       FontSize = 16,
       HTextAlign = "Center"
     })
@@ -162,9 +190,9 @@ function GetControlLayout(props)
 
     table.insert(graphics, {
       Type = "GroupBox",
-      Text = "Probe controls and measurements",
+      Text = "Benchmark controls and measurements",
       Position = { 338, 38 },
-      Size = { 202, 480 },
+      Size = { 250, 480 },
       Fill = { 238, 241, 245 },
       StrokeWidth = 1
     })
@@ -174,30 +202,25 @@ function GetControlLayout(props)
         Type = "Text",
         Text = text,
         Position = { 350, y },
-        Size = { 82, 18 },
-        FontSize = 10,
+        Size = { 96, 18 },
+        FontSize = 9,
         HTextAlign = "Right"
       })
     end
 
-    AddLabel("Rate", 122)
-    AddLabel("Image syntax", 154)
-    AddLabel("Status", 202)
-    AddLabel("Requested", 262)
-    AddLabel("Measured", 294)
-    AddLabel("Ticks", 326)
-    AddLabel("SVG bytes", 358)
-    AddLabel("Base64 bytes", 390)
-    AddLabel("Render time", 422)
-
-    table.insert(graphics, {
-      Type = "Text",
-      Text = "COMPATIBILITY TEST ASSET - NOT PRODUCTION ART",
-      Position = { 350, 476 },
-      Size = { 178, 32 },
-      FontSize = 8,
-      HTextAlign = "Center"
-    })
+    AddLabel("Rate", 112)
+    AddLabel("Render mode", 140)
+    AddLabel("Instances", 168)
+    AddLabel("Image syntax", 196)
+    AddLabel("Use syntax", 224)
+    AddLabel("Status", 250)
+    AddLabel("Requested", 314)
+    AddLabel("Measured", 342)
+    AddLabel("Ticks", 370)
+    AddLabel("SVG bytes", 398)
+    AddLabel("Base64 bytes", 426)
+    AddLabel("Savings", 454)
+    AddLabel("Render time", 482)
 
     layout["Viewport"] = {
       PrettyName = "Probe~Viewport",
@@ -218,8 +241,8 @@ function GetControlLayout(props)
       Style = "Button",
       ButtonStyle = "Toggle",
       ButtonVisualStyle = "Flat",
-      Position = { 350, 74 },
-      Size = { 82, 32 },
+      Position = { 350, 68 },
+      Size = { 106, 30 },
       Color = { 70, 230, 225 },
       Legend = "RUN"
     }
@@ -229,31 +252,32 @@ function GetControlLayout(props)
       Style = "Button",
       ButtonStyle = "Trigger",
       ButtonVisualStyle = "Flat",
-      Position = { 442, 74 },
-      Size = { 82, 32 },
+      Position = { 466, 68 },
+      Size = { 110, 30 },
       Color = { 255, 155, 69 },
       Legend = "RESET"
     }
 
-    layout["Rate"] = {
-      PrettyName = "Probe~Rate",
-      Style = "ComboBox",
-      Position = { 440, 120 },
-      Size = { 84, 22 }
-    }
+    local function AddChoice(name, y)
+      layout[name] = {
+        PrettyName = "Probe~" .. name,
+        Style = "ComboBox",
+        Position = { 454, y },
+        Size = { 122, 22 }
+      }
+    end
 
-    layout["ImageSyntax"] = {
-      PrettyName = "Probe~Image Syntax",
-      Style = "ComboBox",
-      Position = { 440, 152 },
-      Size = { 84, 22 }
-    }
+    AddChoice("Rate", 110)
+    AddChoice("RenderMode", 138)
+    AddChoice("InstanceCount", 166)
+    AddChoice("ImageSyntax", 194)
+    AddChoice("UseSyntax", 222)
 
     layout["Status"] = {
       PrettyName = "Probe~Status",
       Style = "Text",
-      Position = { 350, 220 },
-      Size = { 174, 34 },
+      Position = { 350, 270 },
+      Size = { 226, 32 },
       IsReadOnly = true,
       FontSize = 9,
       HTextAlign = "Center",
@@ -264,20 +288,21 @@ function GetControlLayout(props)
       layout[name] = {
         PrettyName = "Probe~" .. name,
         Style = "Text",
-        Position = { 440, y },
-        Size = { 84, 22 },
+        Position = { 454, y },
+        Size = { 122, 22 },
         IsReadOnly = true,
         FontSize = 9,
         HTextAlign = "Right"
       }
     end
 
-    AddReadout("RequestedHz", 260)
-    AddReadout("MeasuredHz", 292)
-    AddReadout("TickCount", 324)
-    AddReadout("SvgBytes", 356)
-    AddReadout("SvgBase64Bytes", 388)
-    AddReadout("LastRenderMs", 420)
+    AddReadout("RequestedHz", 312)
+    AddReadout("MeasuredHz", 340)
+    AddReadout("TickCount", 368)
+    AddReadout("SvgBytes", 396)
+    AddReadout("SvgBase64Bytes", 424)
+    AddReadout("PayloadSavings", 452)
+    AddReadout("LastRenderMs", 480)
   end
 
   return layout, graphics
@@ -295,46 +320,111 @@ if Controls then
     ["20 Hz"] = 20,
     ["15 Hz"] = 15
   }
-  local SYNTAX_CHOICES = { "href", "xlink:href" }
 
-  local LOGICAL_WIDTH = 320
-  local LOGICAL_HEIGHT = 480
+  local IMAGE_SYNTAX_CHOICES = { "href", "xlink:href" }
+  local USE_SYNTAX_CHOICES = { "href", "xlink:href" }
+  local RENDER_MODE_CHOICES = { "INLINE", "DEFS+USE" }
+  local INSTANCE_COUNT_CHOICES = { "1", "8", "16", "32", "64" }
+  local INSTANCE_COUNT_VALUES = {
+    ["1"] = 1,
+    ["8"] = 8,
+    ["16"] = 16,
+    ["32"] = 32,
+    ["64"] = 64
+  }
+
+  local SPRITE_ID = "compatSprite"
   local SPRITE_SIZE = 32
-  local SPRITE_Y = 420
-  local SPRITE_STEP = 4
-  local MAX_SPRITE_X = LOGICAL_WIDTH - SPRITE_SIZE
+  local GRID_COLUMNS = 8
+  local GRID_X = 18
+  local GRID_Y = 88
+  local GRID_STEP_X = 36
+  local GRID_STEP_Y = 40
+  local MOTION_MIN = 0
+  local MOTION_MAX = 16
+  local MOTION_STEP = 2
 
   -- COMPATIBILITY TEST ASSET - NOT PRODUCTION ART
   -- Deterministic 16 x 16 RGBA PNG, cached as Base64 once in this source file.
   local PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAZElEQVR42mNgwAPcnj38D8IM5ACYZrINAWn68vE+GJNsAMxWZANIMgTd+UQZgEsTUYaRqhmvi8jSRJUwwGbA/9muYEy27egGkBQTID7MAGxyRLkE2QUkJ2WYZmRXkKwZF5+qAADR8ySMsISOUwAAAABJRU5ErkJggg=="
   local PNG_DATA_URI = "data:image/png;base64," .. PNG_BASE64
 
-  local function BuildCompatSvg(spriteX, syntax)
-    local rootNamespace = ""
-    local imageAttribute = "href"
+  local function SpritePosition(index)
+    local zeroBased = index - 1
+    local column = zeroBased % GRID_COLUMNS
+    local row = math.floor(zeroBased / GRID_COLUMNS)
+    local x = GRID_X + column * GRID_STEP_X
+    local y = GRID_Y + row * GRID_STEP_Y
+    return x, y
+  end
 
-    if syntax == "xlink:href" then
-      rootNamespace = " xmlns:xlink=\"http://www.w3.org/1999/xlink\""
-      imageAttribute = "xlink:href"
+  local function PrepareCompatScene(renderMode, instanceCount, imageSyntax, useSyntax)
+    local rootNamespace = ""
+    local definitions = ""
+    local instances = {}
+
+    if renderMode == "DEFS+USE" then
+      definitions = "<defs><image id=\"" .. SPRITE_ID .. "\" href=\"" .. PNG_DATA_URI ..
+        "\" width=\"32\" height=\"32\" preserveAspectRatio=\"none\"/></defs>"
+
+      local useAttribute = "href"
+      if useSyntax == "xlink:href" then
+        rootNamespace = " xmlns:xlink=\"http://www.w3.org/1999/xlink\""
+        useAttribute = "xlink:href"
+      end
+
+      for index = 1, instanceCount do
+        local x, y = SpritePosition(index)
+        instances[index] = "<use " .. useAttribute .. "=\"#" .. SPRITE_ID .. "\" x=\"" ..
+          tostring(x) .. "\" y=\"" .. tostring(y) .. "\"/>"
+      end
+    else
+      local imageAttribute = "href"
+      if imageSyntax == "xlink:href" then
+        rootNamespace = " xmlns:xlink=\"http://www.w3.org/1999/xlink\""
+        imageAttribute = "xlink:href"
+      end
+
+      for index = 1, instanceCount do
+        local x, y = SpritePosition(index)
+        instances[index] = "<image " .. imageAttribute .. "=\"" .. PNG_DATA_URI .. "\" x=\"" ..
+          tostring(x) .. "\" y=\"" .. tostring(y) ..
+          "\" width=\"32\" height=\"32\" preserveAspectRatio=\"none\"/>"
+      end
     end
 
-    return "<svg xmlns=\"http://www.w3.org/2000/svg\"" .. rootNamespace ..
-      " viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">" ..
-      "<rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
-      "<text x=\"160\" y=\"24\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">f5Rocket Q-SYS COMPAT</text>" ..
-      "<g transform=\"translate(" .. tostring(spriteX) .. " " .. tostring(SPRITE_Y) .. ")\">" ..
-      "<image " .. imageAttribute .. "=\"" .. PNG_DATA_URI .. "\" x=\"0\" y=\"0\" width=\"32\" height=\"32\" preserveAspectRatio=\"none\"/>" ..
-      "</g>" ..
-      "<text x=\"160\" y=\"470\" fill=\"#ff9b45\" font-family=\"monospace\" font-size=\"8\" text-anchor=\"middle\">COMPATIBILITY TEST ASSET - NOT PRODUCTION ART</text>" ..
-      "</svg>"
+    return {
+      Prefix = "<svg xmlns=\"http://www.w3.org/2000/svg\"" .. rootNamespace ..
+        " viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">" ..
+        "<rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
+        "<text x=\"160\" y=\"24\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">f5Rocket Q-SYS COMPAT</text>" ..
+        definitions .. "<g transform=\"translate(",
+      Suffix = " 0)\">" .. table.concat(instances) .. "</g>" ..
+        "<text x=\"160\" y=\"470\" fill=\"#ff9b45\" font-family=\"monospace\" font-size=\"8\" text-anchor=\"middle\">COMPATIBILITY TEST ASSET - NOT PRODUCTION ART</text>" ..
+        "</svg>"
+    }
+  end
+
+  local function BuildCompatSvg(scene, motionOffset)
+    return scene.Prefix .. tostring(motionOffset) .. scene.Suffix
+  end
+
+  local function CalculatePayloadSavings(instanceCount, imageSyntax, useSyntax)
+    local inlineScene = PrepareCompatScene("INLINE", instanceCount, imageSyntax, useSyntax)
+    local reuseScene = PrepareCompatScene("DEFS+USE", instanceCount, imageSyntax, useSyntax)
+    local inlineBytes = #BuildCompatSvg(inlineScene, MOTION_MIN)
+    local reuseBytes = #BuildCompatSvg(reuseScene, MOTION_MIN)
+    local savings = ((inlineBytes - reuseBytes) / inlineBytes) * 100
+    return savings, inlineBytes, reuseBytes
   end
   local rapidjson = require("rapidjson")
 
-  local spriteX = 0
-  local spriteDirection = 1
+  local motionOffset = MOTION_MIN
+  local motionDirection = 1
   local tickCount = 0
   local measurementTicks = 0
   local measurementStartedAt = 0
+  local activeScene = nil
 
   -- Reuse this table; only IconData changes per rendered frame.
   ProbeLegend = {
@@ -352,11 +442,32 @@ if Controls then
     return Controls.Rate.String
   end
 
-  local function SelectedSyntax()
+  local function SelectedRenderMode()
+    if Controls.RenderMode.String ~= "INLINE" and Controls.RenderMode.String ~= "DEFS+USE" then
+      Controls.RenderMode.String = "INLINE"
+    end
+    return Controls.RenderMode.String
+  end
+
+  local function SelectedInstanceCount()
+    if INSTANCE_COUNT_VALUES[Controls.InstanceCount.String] == nil then
+      Controls.InstanceCount.String = "16"
+    end
+    return INSTANCE_COUNT_VALUES[Controls.InstanceCount.String]
+  end
+
+  local function SelectedImageSyntax()
     if Controls.ImageSyntax.String ~= "href" and Controls.ImageSyntax.String ~= "xlink:href" then
       Controls.ImageSyntax.String = "href"
     end
     return Controls.ImageSyntax.String
+  end
+
+  local function SelectedUseSyntax()
+    if Controls.UseSyntax.String ~= "href" and Controls.UseSyntax.String ~= "xlink:href" then
+      Controls.UseSyntax.String = "href"
+    end
+    return Controls.UseSyntax.String
   end
 
   local function UpdateRequestedHz()
@@ -365,11 +476,43 @@ if Controls then
   end
 
   local function RunningStatus()
-    return "RUNNING " .. string.upper(SelectedRate()) .. " / " .. SelectedSyntax()
+    return "RUNNING " .. string.upper(SelectedRate()) .. " / " ..
+      SelectedRenderMode() .. " / " .. tostring(SelectedInstanceCount())
+  end
+
+  local function RefreshSceneCache()
+    local renderMode = SelectedRenderMode()
+    local instanceCount = SelectedInstanceCount()
+    local imageSyntax = SelectedImageSyntax()
+    local useSyntax = SelectedUseSyntax()
+
+    activeScene = PrepareCompatScene(renderMode, instanceCount, imageSyntax, useSyntax)
+
+    local savings, inlineBytes, reuseBytes = CalculatePayloadSavings(
+      instanceCount,
+      imageSyntax,
+      useSyntax
+    )
+    Controls.PayloadSavings.String = string.format("%.1f %%", savings)
+
+    local pngOccurrences = 1
+    if renderMode == "INLINE" then
+      pngOccurrences = instanceCount
+    end
+
+    print(string.format(
+      "[f5Rocket Compat] %s / %d: INLINE %d bytes, DEFS+USE %d bytes, savings %.1f%%, PNG payloads %d",
+      renderMode,
+      instanceCount,
+      inlineBytes,
+      reuseBytes,
+      savings,
+      pngOccurrences
+    ))
   end
 
   local function RenderFrameUnsafe()
-    local svg = BuildCompatSvg(spriteX, SelectedSyntax())
+    local svg = BuildCompatSvg(activeScene, motionOffset)
     local encodedSvg = Crypto.Base64Encode(svg)
 
     ProbeLegend.IconData = encodedSvg
@@ -424,13 +567,14 @@ if Controls then
   local function ResetProbe()
     ProbeTimer:Stop()
     Controls.Run.Boolean = false
-    spriteX = 0
-    spriteDirection = 1
+    motionOffset = MOTION_MIN
+    motionDirection = 1
     tickCount = 0
     measurementTicks = 0
     measurementStartedAt = Timer.Now()
 
     UpdateRequestedHz()
+    RefreshSceneCache()
     Controls.MeasuredHz.String = "0.0 Hz"
     Controls.TickCount.String = "0"
 
@@ -454,26 +598,27 @@ if Controls then
     end
   end
 
-  local function ApplySyntaxChange()
+  local function ApplyRenderConfigurationChange()
+    RefreshSceneCache()
     if RenderFrame() and Controls.Run.Boolean then
       Controls.Status.String = RunningStatus()
     end
   end
 
-  local function UpdateSpritePosition()
-    spriteX = spriteX + spriteDirection * SPRITE_STEP
+  local function UpdateMotionOffset()
+    motionOffset = motionOffset + motionDirection * MOTION_STEP
 
-    if spriteX >= MAX_SPRITE_X then
-      spriteX = MAX_SPRITE_X
-      spriteDirection = -1
-    elseif spriteX <= 0 then
-      spriteX = 0
-      spriteDirection = 1
+    if motionOffset >= MOTION_MAX then
+      motionOffset = MOTION_MAX
+      motionDirection = -1
+    elseif motionOffset <= MOTION_MIN then
+      motionOffset = MOTION_MIN
+      motionDirection = 1
     end
   end
 
   ProbeTimer.EventHandler = function()
-    UpdateSpritePosition()
+    UpdateMotionOffset()
 
     if not RenderFrame() then
       return
@@ -505,9 +650,24 @@ if Controls then
     ApplyRateChange()
   end
 
+  Controls.RenderMode.EventHandler = function()
+    SelectedRenderMode()
+    ApplyRenderConfigurationChange()
+  end
+
+  Controls.InstanceCount.EventHandler = function()
+    SelectedInstanceCount()
+    ApplyRenderConfigurationChange()
+  end
+
   Controls.ImageSyntax.EventHandler = function()
-    SelectedSyntax()
-    ApplySyntaxChange()
+    SelectedImageSyntax()
+    ApplyRenderConfigurationChange()
+  end
+
+  Controls.UseSyntax.EventHandler = function()
+    SelectedUseSyntax()
+    ApplyRenderConfigurationChange()
   end
 
   Controls.Reset.EventHandler = function(control)
@@ -517,8 +677,14 @@ if Controls then
   end
 
   Controls.Rate.Choices = RATE_CHOICES
-  Controls.ImageSyntax.Choices = SYNTAX_CHOICES
+  Controls.RenderMode.Choices = RENDER_MODE_CHOICES
+  Controls.InstanceCount.Choices = INSTANCE_COUNT_CHOICES
+  Controls.ImageSyntax.Choices = IMAGE_SYNTAX_CHOICES
+  Controls.UseSyntax.Choices = USE_SYNTAX_CHOICES
   SelectedRate()
-  SelectedSyntax()
+  SelectedRenderMode()
+  SelectedInstanceCount()
+  SelectedImageSyntax()
+  SelectedUseSyntax()
   ResetProbe()
 end
