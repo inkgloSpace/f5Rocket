@@ -2,11 +2,12 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "f5Rocket: Build Q-SYS Plugin",
+      "label": "f5Rocket: Build All Q-SYS Plugins",
       "type": "shell",
       "command": "python3",
       "args": [
-        "qsys/tools/build.py"
+        "qsys/tools/build.py",
+        "all"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -15,6 +16,34 @@
         "kind": "build",
         "isDefault": true
       },
+      "problemMatcher": []
+    },
+    {
+      "label": "f5Rocket: Build Game Plugin",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "qsys/tools/build.py",
+        "game"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "f5Rocket: Build Compatibility Probe",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "qsys/tools/build.py",
+        "compat"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
       "problemMatcher": []
     }
   ]

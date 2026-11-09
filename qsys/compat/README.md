@@ -1,8 +1,20 @@
-# f5Rocket Q-SYS sprite-reuse compatibility benchmark
+# f5Rocket Q-SYS sprite-reuse regression probe
 
-This directory contains the deterministic fixture and test procedure for the generated [`../dist/f5Rocket_Compat.qplug`](../dist/f5Rocket_Compat.qplug). The editable source lives under [`../plugin/`](../plugin/), with [`../plugin/plugin.lua`](../plugin/plugin.lua) as its include-based entry point.
+This directory contains the deterministic fixture and test procedure for the generated [`../dist/f5Rocket_Compat.qplug`](../dist/f5Rocket_Compat.qplug). The frozen editable source lives under [`../plugins/compat/`](../plugins/compat/), with [`../plugins/compat/plugin.lua`](../plugins/compat/plugin.lua) as its include-based entry point.
 
-The baseline `<image href="data:image/png;base64,...">` path is confirmed working in Q-SYS Designer 10.5.0 at approximately 30 Hz. This benchmark asks whether the same renderer supports one PNG in `<defs>` followed by repeated `<use>` instances, and whether the resulting payload reduction remains stable during dynamic `IconData` refresh.
+The baseline `<image href="data:image/png;base64,...">` path and the `<defs>` plus repeated `<use href>` path are confirmed working in Q-SYS Designer 10.5.0 at approximately 30 Hz. This frozen benchmark now exists to detect regressions in that dynamic `IconData` renderer path.
+
+## Confirmed production-direction result
+
+Q-SYS Designer 10.5.0 passed `DEFS+USE` with `<use href>` at 64 simultaneous instances for 60 seconds:
+
+- Requested/measured rate: 30 Hz / 30.0 Hz
+- All sprites visible with smooth group motion
+- No flicker or missing sprites
+- Raw SVG: approximately 3,527 bytes during live two-digit motion
+- Base64 SVG: approximately 4,704 bytes
+
+This establishes `30 Hz + <defs> + <image href="data:image/png;base64,..."> + <use href="#...">` as the production direction. Keep this plugin as regression infrastructure. Do not add gameplay, and do not spend time on xlink unless a later regression requires it.
 
 This is not the game plugin.
 
@@ -120,7 +132,7 @@ One globally scoped `ProbeTimer = Timer.New()` is created at startup. The select
 
 ## Results
 
-Primary validation uses 30 Hz and PNG `ImageSyntax = href`. Fill the xlink rows only if `<use href>` fails.
+Primary validation uses 30 Hz and PNG `ImageSyntax = href`. Retest xlink only if the confirmed `<use href>` path regresses.
 
 | Environment | QDS/Core version | Mode | Use syntax | Instances | Requested Hz | Measured Hz | All sprites visible | Motion stable | Raw SVG bytes | Base64 bytes | Savings | CPU observation | Notes |
 |---|---|---|---|---:|---:|---:|---|---|---:|---:|---:|---|---|
@@ -131,7 +143,7 @@ Primary validation uses 30 Hz and PNG `ImageSyntax = href`. Fill the xlink rows 
 |  |  | DEFS+USE | href | 1 | 30 |  |  |  |  |  |  |  |  |
 |  |  | DEFS+USE | href | 16 | 30 |  |  |  |  |  |  |  |  |
 |  |  | DEFS+USE | href | 32 | 30 |  |  |  |  |  |  |  |  |
-|  |  | DEFS+USE | href | 64 | 30 |  |  |  |  |  |  |  |  |
+| Designer | 10.5.0 | DEFS+USE | href | 64 | 30 | 30.0 | Yes | Yes | ~3,527 | ~4,704 | ~82.9% | Not recorded | 60 seconds; no flicker or missing sprites |
 
 ## Success criteria
 

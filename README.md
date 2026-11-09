@@ -1,6 +1,6 @@
 # f5Rocket
 
-f5Rocket is a semi-8-bit vertical arcade airplane shooter prototype for a future Q-SYS plugin. This first phase runs in a local browser so gameplay, timing, generated SVG, and user-supplied PNG artwork can be iterated quickly.
+f5Rocket is a semi-8-bit vertical arcade airplane shooter with a local browser simulator and a separate modular Q-SYS production plugin. The browser remains the fast visual-iteration environment; the Q-SYS plugin now contains the first bounded playable Lua slice.
 
 This is deliberately a **Q-SYS rendering and gameplay simulator**, not the start of a conventional web-game stack. It uses plain HTML, CSS, vanilla JavaScript modules, and one generated SVG scene. There is no framework, Canvas renderer, WebGL, npm dependency, or build step.
 
@@ -59,11 +59,11 @@ PNG file
 
 The SVG renderer only consumes state and the immutable asset catalog; it does not calculate gameplay or re-read/re-encode PNG files. Scene order is background, decoration, enemies, enemy bullets, player bullets, player, explosions, then HUD. Sprite positions are rounded to integer logical pixels, and the browser scales the fixed SVG with pixelated image rendering.
 
-The generated SVG is self-contained when PNGs are present. The eventual Q-SYS flow will replace JavaScript with Lua, serialize the same kind of SVG scene, Base64-encode the complete SVG, rapidjson-encode the Button legend payload, and assign it through dynamic `IconData`.
+The generated SVG is self-contained when PNGs are present. The production Q-SYS flow uses Lua, caches PNGs once in SVG `<defs>`, emits sprite instances with `<use href="#...">`, Base64-encodes the complete SVG once, rapidjson-encodes the Button legend payload, and assigns it through dynamic `IconData`.
 
 Telemetry reports raw UTF-8 SVG bytes, the mathematically correct Base64 SVG length (`4 × ceil(raw bytes / 3)`), unique cached PNG data-URI bytes, active objects, and average browser SVG generation time. Raw SVG size already includes every embedded PNG data URI used by the scene; the separate asset metric counts each configured cached asset once.
 
-**Browser performance is not equivalent to Q-SYS Core performance.** The telemetry and synthetic scene controls estimate SVG payload growth and browser-side work only. The compatibility probe described in [`qsys/README.md`](qsys/README.md) is required before choosing a Q-SYS scene budget.
+**Browser performance is not equivalent to Q-SYS Core performance.** The telemetry and synthetic scene controls estimate SVG payload growth and browser-side work only. The Q-SYS compatibility probe has validated 64 reused fixture sprites at 30 Hz in Designer 10.5.0, but real artwork and physical Core performance still require separate measurement.
 
 ## PNG asset conventions
 
@@ -82,7 +82,7 @@ assets/explosion/explosion_03.png
 assets/background/background_tile.png
 ```
 
-At startup, `src/assets.js` fetches every configured path once. Valid PNG bytes are converted once to complete data URIs and stored with immutable metadata. Available PNGs become self-contained SVG `<image>` nodes; unavailable files are listed in the debug asset summary, leave the labeled SVG placeholders active, and do not stop the game. See [`assets/README.md`](assets/README.md) for sizing and replacement notes.
+At browser startup, `src/assets.js` fetches every configured path once. For Q-SYS, `python3 qsys/tools/build.py game` validates the same root PNGs and deterministically generates Lua Base64 data before building the plugin. Missing files keep debug placeholders active in both environments. See [`assets/README.md`](assets/README.md) for sizing and replacement notes.
 
 ## SVG inspection bridge
 
@@ -106,20 +106,22 @@ window.__f5Rocket.benchmarkStressLevels(120)
 - `src/debug.js` — browser telemetry presentation
 - `src/main.js` — capped scheduler and module wiring
 - `tools/serve.py` — dependency-free local HTTP server
-- `qsys/README.md` — intentionally small future plugin plan
+- `qsys/plugins/compat/` — frozen SVG/IconData regression probe
+- `qsys/plugins/game/` — modular production Lua game and SVG renderer
+- `qsys/tools/build.py` — deterministic multi-target plugin and PNG asset builder
 
 ## Current limitations
 
-- The player and enemy do not collide; score and explosions are structural placeholders.
-- There is one recycling enemy behavior and no enemy weapons in the normal scene.
-- Embedded PNG data URIs and Base64 SVG `IconData` have not yet been validated inside Q-SYS Designer/Core.
-- Browser SVG timing, memory, and payload limits cannot establish the final Core scene budget.
-- Input is keyboard-only in this phase.
+- The browser prototype still omits collision scoring; the Q-SYS production slice implements player-bullet/enemy AABB scoring independently.
+- The production slice has one recycling enemy type and no enemy weapons, lives, bosses, power-ups, sound, or progression.
+- The real PNG artwork pack is not present, so the Q-SYS game currently renders geometric fallbacks.
+- Q-SYS Designer validation does not establish physical Core CPU or final artwork payload limits.
+- Browser input is keyboard-only; Q-SYS input uses plugin controls.
 
 ## Development phases
 
-1. **Local technical prototype (current):** fixed-step movement, fire pooling, scrolling background, generated SVG, placeholders, asset probes, and load telemetry.
-2. **Q-SYS compatibility probe (next):** one user PNG embedded in dynamic SVG, moved at approximately 30 Hz through Button `IconData`.
-3. **Cross-environment parity:** compare supported SVG/PNG forms, payload size, timing stability, and lower 20/15 Hz modes.
-4. **Gameplay slice:** collisions, enemy patterns, explosions, score, and finalized user artwork.
-5. **Plugin packaging:** complete controls/properties/pages, runtime Lua, operational safeguards, and installation testing.
+1. **Local technical prototype:** browser movement, fire pooling, scrolling background, generated SVG, placeholders, and telemetry.
+2. **Q-SYS compatibility probe:** completed in Designer 10.5.0; 64 `<use href>` instances remained stable at 30 Hz.
+3. **Production playable slice (current):** modular Lua movement, bullets, one enemy type, AABB collision, score, generated SVG, and bounded pools.
+4. **Artwork integration:** add the user PNG pack, rebuild generated Lua asset data, and measure real payloads.
+5. **Core validation and gameplay growth:** verify physical Core limits before adding enemy weapons, patterns, explosions, lives, or progression.
