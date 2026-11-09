@@ -2,6 +2,8 @@
 
 This directory is reserved for the future Q-SYS plugin. Phase 1 intentionally contains no `.qplug` implementation: browser gameplay should remain easy to iterate while the first Core/Designer compatibility assumptions are still unverified.
 
+The exact transformation and conservative SVG template for the first probe are documented in [`compat/README.md`](compat/README.md).
+
 ## Planned plugin structure
 
 The future `.qplug` will define the standard pieces explicitly:

@@ -29,14 +29,12 @@ Then open [http://localhost:8080](http://localhost:8080). Optional flags are `--
 | Space | Fire; hold for repeat fire |
 | Enter | Start/restart the normal scene |
 | P | Pause/resume |
-| D (tap) | Toggle the debug panel |
-| D (hold) | Move right as part of WASD |
+| D | Move right as part of WASD |
+| F3 | Toggle the debug panel |
 | 1 | Normal scene: 1 enemy |
 | 2 | Synthetic load: 10 enemies / 20 bullets |
 | 3 | Synthetic load: 20 enemies / 50 bullets |
 | 4 | Synthetic load: 40 enemies / 120 bullets |
-
-The tap/hold distinction resolves the brief's shared `D` key. Arrow-right always moves without affecting the panel.
 
 ## Rendering architecture
 
@@ -49,9 +47,21 @@ plain game state
 → one 320 × 480 viewport
 ```
 
-The SVG renderer only consumes state; it does not calculate gameplay. Scene order is background, decoration, enemies, enemy bullets, player bullets, player, explosions, then HUD. Sprite positions are rounded to integer logical pixels, and the browser scales the fixed SVG with pixelated image rendering.
+PNG preparation follows a separate startup-only path:
 
-The eventual Q-SYS flow will replace JavaScript with Lua, serialize the same kind of SVG scene, Base64-encode it, and assign it to one Button's dynamic `IconData`.
+```text
+PNG file
+→ one startup fetch
+→ one Base64 conversion
+→ immutable data:image/png;base64,... cache entry
+→ cached string copied into SVG <image href="...">
+```
+
+The SVG renderer only consumes state and the immutable asset catalog; it does not calculate gameplay or re-read/re-encode PNG files. Scene order is background, decoration, enemies, enemy bullets, player bullets, player, explosions, then HUD. Sprite positions are rounded to integer logical pixels, and the browser scales the fixed SVG with pixelated image rendering.
+
+The generated SVG is self-contained when PNGs are present. The eventual Q-SYS flow will replace JavaScript with Lua, serialize the same kind of SVG scene, Base64-encode the complete SVG, rapidjson-encode the Button legend payload, and assign it through dynamic `IconData`.
+
+Telemetry reports raw UTF-8 SVG bytes, the mathematically correct Base64 SVG length (`4 × ceil(raw bytes / 3)`), unique cached PNG data-URI bytes, active objects, and average browser SVG generation time. Raw SVG size already includes every embedded PNG data URI used by the scene; the separate asset metric counts each configured cached asset once.
 
 **Browser performance is not equivalent to Q-SYS Core performance.** The telemetry and synthetic scene controls estimate SVG payload growth and browser-side work only. The compatibility probe described in [`qsys/README.md`](qsys/README.md) is required before choosing a Q-SYS scene budget.
 
@@ -72,7 +82,19 @@ assets/explosion/explosion_03.png
 assets/background/background_tile.png
 ```
 
-At startup, `src/assets.js` probes this manifest. Available PNGs become SVG `<image>` nodes; unavailable files leave the labeled SVG debug placeholders active and do not stop the game. See [`assets/README.md`](assets/README.md) for sizing and replacement notes.
+At startup, `src/assets.js` fetches every configured path once. Valid PNG bytes are converted once to complete data URIs and stored with immutable metadata. Available PNGs become self-contained SVG `<image>` nodes; unavailable files are listed in the debug asset summary, leave the labeled SVG placeholders active, and do not stop the game. See [`assets/README.md`](assets/README.md) for sizing and replacement notes.
+
+## SVG inspection bridge
+
+Open the browser console while the preview is running:
+
+```js
+window.__f5Rocket.getSvg()
+window.__f5Rocket.getDiagnostics()
+window.__f5Rocket.benchmarkStressLevels(120)
+```
+
+`getSvg()` returns the exact current SVG string. Diagnostics return copied values rather than mutable game or asset objects. The benchmark measures SVG string generation only for stress levels 1–4; it does not write benchmark scenes into the live viewport.
 
 ## Source map
 
@@ -80,7 +102,7 @@ At startup, `src/assets.js` probes this manifest. Available PNGs become SVG `<im
 - `src/game.js` — deterministic game state and fixed-step updates
 - `src/input.js` — keyboard state and one-shot commands
 - `src/renderer-svg.js` — complete SVG string generation
-- `src/assets.js` — optional PNG manifest and availability probing
+- `src/assets.js` — startup PNG loading, Base64 encoding, immutable metadata, and missing-file summary
 - `src/debug.js` — browser telemetry presentation
 - `src/main.js` — capped scheduler and module wiring
 - `tools/serve.py` — dependency-free local HTTP server
@@ -90,7 +112,7 @@ At startup, `src/assets.js` probes this manifest. Available PNGs become SVG `<im
 
 - The player and enemy do not collide; score and explosions are structural placeholders.
 - There is one recycling enemy behavior and no enemy weapons in the normal scene.
-- PNG-in-SVG support has not yet been validated inside Q-SYS Designer/Core.
+- Embedded PNG data URIs and Base64 SVG `IconData` have not yet been validated inside Q-SYS Designer/Core.
 - Browser SVG timing, memory, and payload limits cannot establish the final Core scene budget.
 - Input is keyboard-only in this phase.
 

@@ -10,6 +10,7 @@ const KEY_ACTIONS = Object.freeze({
   Space: "fire",
   Enter: "restart",
   KeyP: "pause",
+  F3: "debug",
   Digit1: "stress1",
   Digit2: "stress2",
   Digit3: "stress3",
@@ -23,7 +24,6 @@ function shouldPreventDefault(action) {
 export function createKeyboardInput(target) {
   const down = Object.create(null);
   const pressed = Object.create(null);
-  let dKeyDownAt = 0;
 
   function onKeyDown(event) {
     const action = KEY_ACTIONS[event.code];
@@ -32,11 +32,7 @@ export function createKeyboardInput(target) {
       return;
     }
 
-    if (event.code === "KeyD" && !event.repeat) {
-      dKeyDownAt = performance.now();
-    }
-
-    if (shouldPreventDefault(action)) {
+    if (shouldPreventDefault(action) || action === "debug") {
       event.preventDefault();
     }
 
@@ -54,17 +50,11 @@ export function createKeyboardInput(target) {
       return;
     }
 
-    if (shouldPreventDefault(action)) {
+    if (shouldPreventDefault(action) || action === "debug") {
       event.preventDefault();
     }
 
     down[action] = false;
-
-    // D is shared by WASD-right and the requested debug shortcut. A tap toggles
-    // telemetry; holding it behaves only as movement. Arrow-right is unambiguous.
-    if (event.code === "KeyD" && performance.now() - dKeyDownAt <= 180) {
-      pressed.debug = true;
-    }
   }
 
   function onBlur() {

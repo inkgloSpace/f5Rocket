@@ -46,15 +46,20 @@
             <div><dt>Target</dt><dd id="metricTarget">30 / 30 Hz</dd></div>
             <div><dt>Measured</dt><dd id="metricMeasured">— / — Hz</dd></div>
             <div><dt>Scheduler</dt><dd id="metricFrameTime">— ms</dd></div>
-            <div><dt>Update / render</dt><dd id="metricWorkTime">— / — ms</dd></div>
+            <div><dt>Update / SVG gen</dt><dd id="metricWorkTime">— / — ms</dd></div>
             <div><dt>Player</dt><dd id="metricPlayer">—, —</dd></div>
             <div><dt>Enemies</dt><dd id="metricEnemies">0</dd></div>
             <div><dt>Bullets</dt><dd id="metricBullets">0</dd></div>
             <div><dt>Explosions</dt><dd id="metricExplosions">0</dd></div>
-            <div><dt>Visual objects</dt><dd id="metricObjects">0</dd></div>
-            <div><dt>SVG payload</dt><dd id="metricSvgSize">0 B</dd></div>
-            <div class="metric-wide"><dt>PNG assets found</dt><dd id="metricAssets">0 / 10</dd></div>
+            <div><dt>Objects</dt><dd id="metricObjects">0</dd></div>
+            <div><dt>Asset data</dt><dd id="metricAssetData">0 B</dd></div>
+            <div><dt>SVG raw</dt><dd id="metricSvgRaw">0 B</dd></div>
+            <div><dt>SVG Base64</dt><dd id="metricSvgBase64">0 B</dd></div>
+            <div class="metric-wide"><dt>Render mode</dt><dd id="metricRenderMode">SVG PLACEHOLDERS</dd></div>
+            <div class="metric-wide"><dt>PNG assets cached</dt><dd id="metricAssets">0 / 10</dd></div>
           </dl>
+
+          <p id="assetStatus" class="asset-status">Preparing configured PNG assets…</p>
 
           <div class="stress-help">
             <p><strong>Synthetic scene load</strong></p>
@@ -69,7 +74,7 @@
         <div><kbd>SPACE</kbd><span>hold</span><strong>FIRE</strong></div>
         <div><kbd>ENTER</kbd><span>any time</span><strong>RESTART</strong></div>
         <div><kbd>P</kbd><span>toggle</span><strong>PAUSE</strong></div>
-        <div><kbd>D</kbd><span>toggle</span><strong>DEBUG</strong></div>
+        <div><kbd>F3</kbd><span>toggle</span><strong>DEBUG</strong></div>
       </footer>
     </main>
 

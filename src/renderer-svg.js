@@ -13,13 +13,17 @@ function escapeAttribute(value) {
 }
 
 function imageNode(entry, width, height) {
-  return `<image href="${escapeAttribute(entry.path)}" width="${width}" height="${height}" preserveAspectRatio="none" style="image-rendering:pixelated"/>`;
+  return `<image href="${escapeAttribute(entry.dataUri)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none"/>`;
+}
+
+function hasEmbeddedPng(entry) {
+  return entry.available && entry.mimeType === "image/png" && entry.dataUri.startsWith("data:image/png;base64,");
 }
 
 function addBackground(parts, game, assets) {
   parts.push('<rect width="320" height="480" fill="#07101f"/>');
 
-  if (assets.background.tile.available) {
+  if (hasEmbeddedPng(assets.background.tile)) {
     const offset = integer(game.background.tileOffset);
     parts.push(`<g transform="translate(0 ${offset - CONFIG.logicalHeight})">${imageNode(assets.background.tile, 320, 480)}</g>`);
     parts.push(`<g transform="translate(0 ${offset})">${imageNode(assets.background.tile, 320, 480)}</g>`);
@@ -71,7 +75,7 @@ function addEnemies(parts, game, assets) {
       continue;
     }
 
-    if (assets.enemy.basic.available) {
+    if (hasEmbeddedPng(assets.enemy.basic)) {
       parts.push(`<g transform="translate(${integer(enemy.x)} ${integer(enemy.y)})">${imageNode(assets.enemy.basic, enemy.width, enemy.height)}</g>`);
     } else {
       addEnemyPlaceholder(parts, enemy);
@@ -92,7 +96,7 @@ function addBulletPool(parts, pool, asset, color, testColor) {
     const x = integer(bullet.x);
     const y = integer(bullet.y);
 
-    if (asset.available) {
+    if (hasEmbeddedPng(asset)) {
       parts.push(`<g transform="translate(${x} ${y})">${imageNode(asset, bullet.width, bullet.height)}</g>`);
     } else {
       const fill = bullet.synthetic ? testColor : color;
@@ -110,10 +114,10 @@ function addBullets(parts, game, assets) {
 }
 
 function playerAssetForDirection(player, assets) {
-  if (player.direction < 0 && assets.player.left.available) {
+  if (player.direction < 0 && hasEmbeddedPng(assets.player.left)) {
     return assets.player.left;
   }
-  if (player.direction > 0 && assets.player.right.available) {
+  if (player.direction > 0 && hasEmbeddedPng(assets.player.right)) {
     return assets.player.right;
   }
   return assets.player.idle;
@@ -127,7 +131,7 @@ function addPlayer(parts, game, assets) {
 
   parts.push(`<g id="player" transform="translate(${x} ${y})">`);
 
-  if (asset.available) {
+  if (hasEmbeddedPng(asset)) {
     parts.push(imageNode(asset, player.width, player.height));
   } else {
     parts.push(
@@ -156,7 +160,7 @@ function addExplosions(parts, game, assets) {
     const frameAsset = assets.explosion[explosion.frame];
     parts.push(`<g transform="translate(${x} ${y})">`);
 
-    if (frameAsset && frameAsset.available) {
+    if (frameAsset && hasEmbeddedPng(frameAsset)) {
       parts.push(imageNode(frameAsset, explosion.width, explosion.height));
     } else {
       const radius = 5 + explosion.frame * 4;

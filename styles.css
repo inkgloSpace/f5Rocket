@@ -228,6 +228,19 @@ h1 span {
   line-height: 1.55;
 }
 
+.asset-status {
+  overflow: hidden;
+  max-height: 2.9em;
+  margin: 12px 0 0;
+  color: #68768b;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.game-viewport image {
+  image-rendering: pixelated;
+}
+
 .stress-help p {
   margin-bottom: 8px;
 }
