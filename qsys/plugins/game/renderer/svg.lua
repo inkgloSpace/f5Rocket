@@ -18,14 +18,9 @@ local MINIMAL_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. FALLBACK_PLAYER_DEFINITI
 local MINIMAL_SVG_SUFFIX = "\" y=\"220\"/></svg>"
 
 local function AppendBackground(parts, state)
-  local definitionId = "fallback_starfield"
-  if AssetAvailable("background_tile") then
-    definitionId = "background_tile"
-  end
-
   local offset = state.backgroundOffset
-  AppendTranslatedUse(parts, definitionId, 0, offset - GAME_CONFIG.LogicalHeight)
-  AppendTranslatedUse(parts, definitionId, 0, offset)
+  AppendTranslatedUse(parts, "fallback_starfield", 0, offset - GAME_CONFIG.LogicalHeight)
+  AppendTranslatedUse(parts, "fallback_starfield", 0, offset)
 end
 
 local function AppendEnemy(parts, enemy)

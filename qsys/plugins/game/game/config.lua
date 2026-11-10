@@ -4,6 +4,10 @@ local GAME_CONFIG = {
   UpdateHz = 30,
   UpdateInterval = 1 / 30,
 
+  -- Project safety budget, not an official Q-SYS limit. Oversized dynamic
+  -- frames are rejected before Base64 encoding or Viewport.Legend assignment.
+  MaxRawSvgBytes = 64 * 1024,
+
   PlayerWidth = 32,
   PlayerHeight = 40,
   PlayerSpeed = 4,

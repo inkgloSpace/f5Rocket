@@ -11,6 +11,21 @@ local ASSET_MANIFEST = {
   { Id = "background_tile", Source = "assets/background/background_tile.png", Width = 320, Height = 480 }
 }
 
+-- Only assets used by the current 30 Hz playable slice belong in its SVG.
+-- Large backgrounds and feature-deferred sprites remain generated and cached,
+-- but are not copied into every dynamic frame.
+local GAMEPLAY_ASSET_IDS = {
+  player_idle = true,
+  player_left = true,
+  player_right = true,
+  enemy_01 = true,
+  bullet_player = true
+}
+
+local LARGE_BACKGROUND_ASSET_IDS = {
+  background_tile = true
+}
+
 local STARFIELD = {
   { 12, 18, 1 }, { 48, 52, 2 }, { 86, 31, 1 }, { 130, 74, 1 },
   { 176, 22, 2 }, { 224, 64, 1 }, { 282, 36, 1 }, { 308, 92, 2 },
@@ -58,17 +73,24 @@ end
 FALLBACK_STARFIELD_PARTS[#FALLBACK_STARFIELD_PARTS + 1] = "</g>"
 local FALLBACK_STARFIELD_DEFINITION = table.concat(FALLBACK_STARFIELD_PARTS)
 
-local FALLBACK_DEFINITIONS = table.concat({
+local GAMEPLAY_FALLBACK_DEFINITIONS = table.concat({
   FALLBACK_PLAYER_DEFINITION,
   FALLBACK_ENEMY_DEFINITION,
   FALLBACK_PLAYER_BULLET_DEFINITION,
-  FALLBACK_ENEMY_BULLET_DEFINITION,
-  FALLBACK_EXPLOSION_DEFINITION,
   FALLBACK_STARFIELD_DEFINITION
 })
 
+-- Retained for the future enemy-bullet/explosion features, but intentionally
+-- excluded from the current dynamic frame definition set.
+local DEFERRED_FALLBACK_DEFINITIONS = table.concat({
+  FALLBACK_ENEMY_BULLET_DEFINITION,
+  FALLBACK_EXPLOSION_DEFINITION
+})
+
 local ASSETS = {}
-local ASSET_DEFINITION_PARTS = {}
+local GAMEPLAY_ASSET_DEFINITION_PARTS = {}
+local LARGE_BACKGROUND_ASSET_DEFINITION_PARTS = {}
+local RUNTIME_DEFINITION_AVAILABLE = {}
 local MISSING_ASSET_PATHS = {}
 local availableAssetCount = 0
 
@@ -88,21 +110,33 @@ for index = 1, #ASSET_MANIFEST do
 
   if available then
     availableAssetCount = availableAssetCount + 1
-    ASSET_DEFINITION_PARTS[#ASSET_DEFINITION_PARTS + 1] =
+    local definition =
       "<image id=\"" .. metadata.Id .. "\" href=\"" .. generated.DataUri ..
       "\" width=\"" .. tostring(metadata.Width) .. "\" height=\"" ..
       tostring(metadata.Height) .. "\" preserveAspectRatio=\"none\"/>"
+
+    if GAMEPLAY_ASSET_IDS[metadata.Id] then
+      GAMEPLAY_ASSET_DEFINITION_PARTS[#GAMEPLAY_ASSET_DEFINITION_PARTS + 1] = definition
+      RUNTIME_DEFINITION_AVAILABLE[metadata.Id] = true
+    elseif LARGE_BACKGROUND_ASSET_IDS[metadata.Id] then
+      LARGE_BACKGROUND_ASSET_DEFINITION_PARTS[#LARGE_BACKGROUND_ASSET_DEFINITION_PARTS + 1] = definition
+    end
   else
     MISSING_ASSET_PATHS[#MISSING_ASSET_PATHS + 1] = metadata.Source
   end
 end
 
-local ASSET_DEFINITIONS = table.concat(ASSET_DEFINITION_PARTS)
-local STATIC_RENDER_DEFINITIONS = ASSET_DEFINITIONS .. FALLBACK_DEFINITIONS
+local GAMEPLAY_ASSET_DEFINITIONS = table.concat(GAMEPLAY_ASSET_DEFINITION_PARTS)
+local LARGE_BACKGROUND_ASSET_DEFINITIONS = table.concat(LARGE_BACKGROUND_ASSET_DEFINITION_PARTS)
+local STATIC_RENDER_DEFINITIONS = GAMEPLAY_ASSET_DEFINITIONS .. GAMEPLAY_FALLBACK_DEFINITIONS
 
 local function AssetAvailable(assetId)
   local asset = ASSETS[assetId]
   return asset ~= nil and asset.Available
+end
+
+local function RuntimeDefinitionAvailable(assetId)
+  return RUNTIME_DEFINITION_AVAILABLE[assetId] == true
 end
 
 local function AppendDefinitionUse(parts, definitionId, x, y)
@@ -117,7 +151,7 @@ local function AppendTranslatedUse(parts, definitionId, x, y)
 end
 
 local function AppendSpriteUse(parts, assetId, fallbackId, x, y)
-  if AssetAvailable(assetId) then
+  if RuntimeDefinitionAvailable(assetId) then
     AppendDefinitionUse(parts, assetId, x, y)
   else
     AppendDefinitionUse(parts, fallbackId, x, y)
@@ -125,13 +159,13 @@ local function AppendSpriteUse(parts, assetId, fallbackId, x, y)
 end
 
 local function ResolvePlayerDefinition(direction)
-  if direction == "left" and AssetAvailable("player_left") then
+  if direction == "left" and RuntimeDefinitionAvailable("player_left") then
     return "player_left"
   end
-  if direction == "right" and AssetAvailable("player_right") then
+  if direction == "right" and RuntimeDefinitionAvailable("player_right") then
     return "player_right"
   end
-  if AssetAvailable("player_idle") then
+  if RuntimeDefinitionAvailable("player_idle") then
     return "player_idle"
   end
   return "fallback_player"
@@ -139,6 +173,14 @@ end
 
 local function AssetAvailabilitySummary()
   return tostring(availableAssetCount) .. "/" .. tostring(#ASSET_MANIFEST) .. " ASSETS"
+end
+
+local function GameplayAssetDefinitionBytes()
+  return #GAMEPLAY_ASSET_DEFINITIONS
+end
+
+local function LargeBackgroundAssetDefinitionBytes()
+  return #LARGE_BACKGROUND_ASSET_DEFINITIONS
 end
 
 local function MissingAssetList()

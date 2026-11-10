@@ -61,7 +61,7 @@ Its 1/8/16/32/64-instance benchmark, INLINE comparison, 30/20/15 Hz rates, and s
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.1.1`
+- Version: `0.1.2`
 - Page: `Game`
 - Logical viewport: 320×480
 - Fixed update/render target: 30 Hz
@@ -93,7 +93,9 @@ assets/background/
 assets/hud/
 ```
 
-The game build reads the expected PNGs from those folders and generates `plugins/game/generated/assets_data.lua`. Handwritten [`plugins/game/renderer/assets.lua`](plugins/game/renderer/assets.lua) owns XML-safe IDs, logical display dimensions, availability checks, cached `<defs>` construction, and player-direction fallback rules.
+The game build reads the expected PNGs from those folders and generates `plugins/game/generated/assets_data.lua`. Handwritten [`plugins/game/renderer/assets.lua`](plugins/game/renderer/assets.lua) owns XML-safe IDs, logical display dimensions, availability checks, cached `<defs>` construction, player-direction fallback rules, and the explicit runtime-definition allowlist.
+
+Generation and 30 Hz embedding are separate concerns: all manifest PNGs remain available in generated Lua data, while the current dynamic game SVG embeds only `player_idle`, `player_left`, `player_right`, `enemy_01`, and `bullet_player`. Enemy bullets and explosions are deferred until those features are active. `background_tile` remains generated but is deliberately excluded from the dynamic definition set.
 
 Missing PNGs are expected and do not fail the build. Generated entries remain unavailable, Q-SYS debug output lists them, and the renderer uses obvious SVG geometry plus a deterministic starfield. These fallbacks are cached once in `<defs>` and placed with `<use href>` just like PNG-backed sprites; their geometry is not expanded per object or recalculated per frame. Invalid files at an expected PNG path do fail the build.
 
@@ -103,7 +105,7 @@ Every frame follows one fixed path:
 
 ```text
 game state
-→ cached PNG definitions in <defs>
+→ allowlisted gameplay PNG definitions in <defs>
 → sprite <use href="#assetId"> or <use href="#fallbackId"> instances
 → one complete 320×480 SVG string
 → one Crypto.Base64Encode(svg)
@@ -111,7 +113,13 @@ game state
 → one Controls.Viewport.Legend assignment
 ```
 
-The PNG definitions, fallback definitions, and deterministic 320×480 starfield tile are prepared once. The scrolling background places two tile instances and changes only their integer translations. Runtime performs no filesystem access, network access, or PNG encoding.
+The selected PNG definitions, fallback definitions, and deterministic 320×480 starfield tile are prepared once. The scrolling background always places two lightweight fallback tile instances and changes only their integer translations. The current full-screen background PNG is never copied into the 30 Hz SVG. Runtime performs no filesystem access, network access, or PNG encoding.
+
+Project engineering targets are below 32 KB raw SVG and below 48 KB after SVG Base64 encoding. These are not official Q-SYS limits. A centralized 64 KB raw-frame guard rejects an oversized SVG before Base64 encoding or `Viewport.Legend` assignment and reports `ERROR @ PAYLOAD` instead of sending it to Designer. Start-up debug output records gameplay definition bytes, deferred background definition bytes, current SVG bytes, Base64 bytes, and the guard value.
+
+## Future background artwork
+
+The eventual runtime background should use small repeating ocean tiles—ideally 32×32 or 64×64—plus small island and cloud sprites. Each asset should appear once in `<defs>`, repeat through `<use href>`, and scroll with integer coordinates or transforms. A large 320×480 PNG may remain a visual reference, but it should not be embedded again inside every dynamic 30 Hz frame.
 
 ## Game modules
 

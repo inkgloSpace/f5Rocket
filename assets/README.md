@@ -23,4 +23,6 @@ Missing files are expected during development. `src/assets.js` handles browser p
 
 Each generated Q-SYS entry records its source path, availability, MIME type, data URI, source byte count, Base64 character count, and decoded dimensions. The generated Lua file is committed for reproducible installation but must never be edited manually.
 
-Keep PNGs optimized and avoid renaming them without updating both explicit manifests. The Q-SYS renderer places each available PNG once in SVG `<defs>` and emits repeated `<use href="#assetId">` instances. This path is validated in Q-SYS Designer 10.5.0; real artwork payloads and physical Core cost still need measurement.
+Keep PNGs optimized and avoid renaming them without updating both explicit manifests. The Q-SYS build caches every available manifest PNG, but the 30 Hz renderer embeds only assets allowlisted for currently active gameplay. It places each selected PNG once in SVG `<defs>` and emits repeated `<use href="#assetId">` instances. This path is validated in Q-SYS Designer 10.5.0; real artwork payloads and physical Core cost still need measurement.
+
+The current 320×480 `background_tile.png` remains available for browser work and visual reference but is excluded from dynamic Q-SYS game frames. The future Q-SYS background should use a small repeating ocean tile—preferably 32×32 or 64×64—plus small island and cloud sprites, all reused with `<defs>/<use>` and scrolled with integer coordinates or transforms. Do not embed a large full-screen Base64 PNG inside every 30 Hz SVG.

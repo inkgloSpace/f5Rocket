@@ -68,9 +68,18 @@ local function UpdateMinimalMotion()
 end
 
 local function AssignSvgToViewportUnsafe(svg)
+  lastRawBytes = #svg
+  if lastRawBytes > GAME_CONFIG.MaxRawSvgBytes then
+    lastTickStage = "PAYLOAD"
+    error(
+      "SVG " .. tostring(lastRawBytes) .. " B > " ..
+      tostring(GAME_CONFIG.MaxRawSvgBytes) .. " B",
+      0
+    )
+  end
+
   lastTickStage = "BASE64"
   local encodedSvg = Crypto.Base64Encode(svg)
-  lastRawBytes = #svg
   lastEncodedBytes = #encodedSvg
 
   lastTickStage = "LEGEND"
@@ -223,6 +232,15 @@ local function StartGame()
   ResetMeasurement()
 
   if RenderImmediateProtected() then
+    print(string.format(
+      "[f5Rocket] Start payload / %s: gameplay definitions %d B, deferred background definitions %d B, SVG %d B, Base64 %d B, guard %d B",
+      activeDiagnosticMode,
+      GameplayAssetDefinitionBytes(),
+      LargeBackgroundAssetDefinitionBytes(),
+      lastRawBytes,
+      lastEncodedBytes,
+      GAME_CONFIG.MaxRawSvgBytes
+    ))
     UpdateStatus(RunningStatus())
     GameTimer:Start(GAME_CONFIG.UpdateInterval)
   end
