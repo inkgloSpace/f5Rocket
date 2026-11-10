@@ -19,23 +19,19 @@ table.insert(controls, {
   ControlType = "Button",
   ButtonType = "Toggle",
   DefaultValue = false,
-  Count = 1
+  Count = 1,
+  UserPin = true,
+  PinStyle = "Input"
 })
 
 table.insert(controls, {
-  Name = "Left",
+  Name = "Pause",
   ControlType = "Button",
-  ButtonType = "Momentary",
+  ButtonType = "Toggle",
   DefaultValue = false,
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "Right",
-  ControlType = "Button",
-  ButtonType = "Momentary",
-  DefaultValue = false,
-  Count = 1
+  Count = 1,
+  UserPin = true,
+  PinStyle = "Input"
 })
 
 table.insert(controls, {
@@ -43,7 +39,9 @@ table.insert(controls, {
   ControlType = "Button",
   ButtonType = "Momentary",
   DefaultValue = false,
-  Count = 1
+  Count = 1,
+  UserPin = true,
+  PinStyle = "Input"
 })
 
 table.insert(controls, {
@@ -51,7 +49,29 @@ table.insert(controls, {
   ControlType = "Button",
   ButtonType = "Momentary",
   DefaultValue = false,
-  Count = 1
+  Count = 1,
+  UserPin = true,
+  PinStyle = "Input"
+})
+
+table.insert(controls, {
+  Name = "Left",
+  ControlType = "Button",
+  ButtonType = "Momentary",
+  DefaultValue = false,
+  Count = 1,
+  UserPin = true,
+  PinStyle = "Input"
+})
+
+table.insert(controls, {
+  Name = "Right",
+  ControlType = "Button",
+  ButtonType = "Momentary",
+  DefaultValue = false,
+  Count = 1,
+  UserPin = true,
+  PinStyle = "Input"
 })
 
 table.insert(controls, {
@@ -59,7 +79,9 @@ table.insert(controls, {
   ControlType = "Button",
   ButtonType = "Momentary",
   DefaultValue = false,
-  Count = 1
+  Count = 1,
+  UserPin = true,
+  PinStyle = "Input"
 })
 
 table.insert(controls, {

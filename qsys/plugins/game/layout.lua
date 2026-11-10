@@ -63,9 +63,20 @@ if currentPage == 1 then
     ButtonStyle = "Toggle",
     ButtonVisualStyle = "Flat",
     Position = { 514, 68 },
-    Size = { 222, 34 },
+    Size = { 105, 34 },
     Color = { 70, 230, 225 },
     Legend = "RUN"
+  }
+
+  layout["Pause"] = {
+    PrettyName = "Game~Pause",
+    Style = "Button",
+    ButtonStyle = "Toggle",
+    ButtonVisualStyle = "Flat",
+    Position = { 631, 68 },
+    Size = { 105, 34 },
+    Color = { 245, 166, 35 },
+    Legend = "PAUSE"
   }
 
   local function AddButton(name, x, y, width, height, legend)

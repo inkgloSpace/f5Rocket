@@ -90,14 +90,16 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.4.1`
+- Version: `0.4.2`
 - Page: `Game`
 - Logical viewport: 320×480; Q-SYS display size: 480×720
 - Fixed update/render target: 30 Hz
 
 The current slice keeps the proven Toggle Run lifecycle and implements a three-stage campaign: Easy near orbit, Medium AV-tech asteroid space, and the Hard Q-Core arena. Each wave has a stage-local score threshold, a deterministic boss, a 45-tick clear transition, and a static stage background. A bounded three-layer SVG parallax overlay supplies motion without re-encoding the full-screen PNG. The campaign ends with MISSION COMPLETE at a minimum cumulative score of 52,500. One-hit death and Run OFF/ON restart semantics remain unchanged.
 
-Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Left`, `Right`, `Up`, `Down`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run` is a Toggle; movement and fire remain Momentary controls read directly during each timer tick.
+Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run` and `Pause` are Toggles; movement and fire remain Momentary controls read directly during each timer tick.
+
+`Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, and `Fire` are also available as Q-SYS input control pins through **Properties → Control Pins**. These pins use the same Control objects as the panel buttons: an external HIGH holds a Momentary movement/fire input, while the Run and Pause Boolean values follow their Toggle semantics. Telemetry and viewport controls are not exposed as pins.
 
 Campaign tuning is centralized and deterministic:
 
@@ -113,10 +115,11 @@ The production lifecycle now directly follows the proven probes:
 
 - Enabling `Run` stops the timer, resets game state and enemies, renders one initial frame, reports `RUNNING`, and starts the single timer at 30 Hz.
 - Disabling `Run` stops the timer, sets `gameState.running` false, and reports `STOPPED`.
+- Enabling `Pause` while Run is active stops that same timer without resetting state, renders one paused frame, and reports `PAUSED`. Disabling Pause resets only the measurement window and resumes the same state. Stopping or starting a game clears Pause.
 - Each timer tick reads input, updates the existing game state, renders and assigns one transparent gameplay frame, then updates visible telemetry only when the approximately one-second measurement window closes.
 - The background Legend is encoded and assigned only at initialization, new-game reset, and stage transition. It is never touched by the timer hot path.
 - FAR, MID, and NEAR parallax objects are preallocated, update inside the existing timer, and render as lightweight `<use>` instances before all gameplay objects. Boss, clear, death, and completion phases reduce their speed rather than stopping them.
-- No production diagnostic mode, Pause control, whole-tick `pcall`, or additional timer exists. Those diagnostics belong to the separate runtime probe.
+- No production diagnostic mode, whole-tick `pcall`, or additional timer exists. Runtime diagnostics belong to the separate runtime probe.
 
 ## Shared PNG asset pipeline
 

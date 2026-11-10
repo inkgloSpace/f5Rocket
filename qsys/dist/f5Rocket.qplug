@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.4.1",
-  BuildVersion = "0.4.1.0",
+  Version = "0.4.2",
+  BuildVersion = "0.4.2.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -66,23 +66,19 @@ function GetControls(props)
     ControlType = "Button",
     ButtonType = "Toggle",
     DefaultValue = false,
-    Count = 1
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
   })
 
   table.insert(controls, {
-    Name = "Left",
+    Name = "Pause",
     ControlType = "Button",
-    ButtonType = "Momentary",
+    ButtonType = "Toggle",
     DefaultValue = false,
-    Count = 1
-  })
-
-  table.insert(controls, {
-    Name = "Right",
-    ControlType = "Button",
-    ButtonType = "Momentary",
-    DefaultValue = false,
-    Count = 1
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
   })
 
   table.insert(controls, {
@@ -90,7 +86,9 @@ function GetControls(props)
     ControlType = "Button",
     ButtonType = "Momentary",
     DefaultValue = false,
-    Count = 1
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
   })
 
   table.insert(controls, {
@@ -98,7 +96,29 @@ function GetControls(props)
     ControlType = "Button",
     ButtonType = "Momentary",
     DefaultValue = false,
-    Count = 1
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+
+  table.insert(controls, {
+    Name = "Left",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    DefaultValue = false,
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+
+  table.insert(controls, {
+    Name = "Right",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    DefaultValue = false,
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
   })
 
   table.insert(controls, {
@@ -106,7 +126,9 @@ function GetControls(props)
     ControlType = "Button",
     ButtonType = "Momentary",
     DefaultValue = false,
-    Count = 1
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
   })
 
   table.insert(controls, {
@@ -224,9 +246,20 @@ function GetControlLayout(props)
       ButtonStyle = "Toggle",
       ButtonVisualStyle = "Flat",
       Position = { 514, 68 },
-      Size = { 222, 34 },
+      Size = { 105, 34 },
       Color = { 70, 230, 225 },
       Legend = "RUN"
+    }
+
+    layout["Pause"] = {
+      PrettyName = "Game~Pause",
+      Style = "Button",
+      ButtonStyle = "Toggle",
+      ButtonVisualStyle = "Flat",
+      Position = { 631, 68 },
+      Size = { 105, 34 },
+      Color = { 245, 166, 35 },
+      Legend = "PAUSE"
     }
 
     local function AddButton(name, x, y, width, height, legend)
@@ -913,6 +946,7 @@ if Controls then
   local function CreateGameState()
     local state = {
       running = false,
+      paused = false,
       gameOver = false,
       gameOverTicks = 0,
       gameOverFrozen = false,
@@ -1045,6 +1079,7 @@ if Controls then
 
   local function ResetGameState(state)
     state.running = false
+    state.paused = false
     state.gameOver = false
     state.gameOverTicks = 0
     state.gameOverFrozen = false
@@ -2223,6 +2258,9 @@ if Controls then
       AppendCenteredOverlay(parts, "GAME OVER", state.score, "TOGGLE RUN TO RESTART")
     elseif state.gameClear then
       AppendCenteredOverlay(parts, "MISSION COMPLETE", state.score, "TOGGLE RUN TO RESTART")
+    elseif state.paused then
+      parts[#parts + 1] = "<rect x=\"78\" y=\"205\" width=\"164\" height=\"62\" fill=\"#07101f\" stroke=\"#f5a623\"/>"
+      parts[#parts + 1] = "<text x=\"160\" y=\"244\" fill=\"#f5a623\" font-family=\"monospace\" font-size=\"18\" text-anchor=\"middle\">PAUSED</text>"
     elseif state.stagePhase == "CLEAR" then
       parts[#parts + 1] = "<rect x=\"60\" y=\"205\" width=\"200\" height=\"62\" fill=\"#07101f\" stroke=\"#46e6e1\"/>"
       parts[#parts + 1] = "<text x=\"160\" y=\"244\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"18\" text-anchor=\"middle\">STAGE CLEAR</text>"
@@ -2293,14 +2331,13 @@ if Controls then
   end
 
   local function ResetMeasurement()
-    tickCount = 0
     measurementTicks = 0
     measurementStartedAt = Timer.Now()
     Controls.MeasuredHz.String = "MEASURING"
   end
 
   local function UpdateGameState()
-    if not gameState.running then
+    if not gameState.running or gameState.paused then
       return
     end
 
@@ -2376,11 +2413,14 @@ if Controls then
 
   local function StartGame()
     GameTimer:Stop()
+    Controls.Pause.Boolean = false
     ResetGameState(gameState)
     EnterStage(gameState, 1)
     ResetEnemies(gameState)
     ResetParallax(gameState, 1)
     gameState.running = true
+    gameState.paused = false
+    tickCount = 0
     ResetMeasurement()
     AssignStageBackground(1)
     RenderGameFrame()
@@ -2392,7 +2432,37 @@ if Controls then
   local function StopGame()
     GameTimer:Stop()
     gameState.running = false
+    gameState.paused = false
+    Controls.Pause.Boolean = false
     Controls.Status.String = "STOPPED"
+  end
+
+  local function PauseGame()
+    if not gameState.running or gameState.gameOver or gameState.gameClear then
+      Controls.Pause.Boolean = false
+      return
+    end
+
+    GameTimer:Stop()
+    gameState.paused = true
+    RenderGameFrame()
+    UpdateSceneTelemetry()
+    Controls.MeasuredHz.String = "PAUSED"
+    Controls.Status.String = "PAUSED"
+  end
+
+  local function ResumeGame()
+    if not gameState.running then
+      Controls.Pause.Boolean = false
+      return
+    end
+
+    gameState.paused = false
+    ResetMeasurement()
+    RenderGameFrame()
+    UpdateSceneTelemetry()
+    Controls.Status.String = "RUNNING"
+    GameTimer:Start(GAME_CONFIG.UpdateInterval)
   end
 
   GameTimer.EventHandler = function()
@@ -2420,12 +2490,26 @@ if Controls then
     end
   end
 
+  Controls.Pause.EventHandler = function(control)
+    if not Controls.Run.Boolean or gameState.gameOver or gameState.gameClear then
+      control.Boolean = false
+      return
+    end
+
+    if control.Boolean then
+      PauseGame()
+    else
+      ResumeGame()
+    end
+  end
+
   ResetGameState(gameState)
   EnterStage(gameState, 1)
   ResetEnemies(gameState)
   ResetParallax(gameState, 1)
   GameTimer:Stop()
   Controls.Run.Boolean = false
+  Controls.Pause.Boolean = false
   Controls.MeasuredHz.String = "0.0 Hz"
   AssignStageBackground(1)
   RenderGameFrame()

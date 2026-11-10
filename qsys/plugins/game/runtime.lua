@@ -58,14 +58,13 @@ local function UpdateSceneTelemetry()
 end
 
 local function ResetMeasurement()
-  tickCount = 0
   measurementTicks = 0
   measurementStartedAt = Timer.Now()
   Controls.MeasuredHz.String = "MEASURING"
 end
 
 local function UpdateGameState()
-  if not gameState.running then
+  if not gameState.running or gameState.paused then
     return
   end
 
@@ -141,11 +140,14 @@ end
 
 local function StartGame()
   GameTimer:Stop()
+  Controls.Pause.Boolean = false
   ResetGameState(gameState)
   EnterStage(gameState, 1)
   ResetEnemies(gameState)
   ResetParallax(gameState, 1)
   gameState.running = true
+  gameState.paused = false
+  tickCount = 0
   ResetMeasurement()
   AssignStageBackground(1)
   RenderGameFrame()
@@ -157,7 +159,37 @@ end
 local function StopGame()
   GameTimer:Stop()
   gameState.running = false
+  gameState.paused = false
+  Controls.Pause.Boolean = false
   Controls.Status.String = "STOPPED"
+end
+
+local function PauseGame()
+  if not gameState.running or gameState.gameOver or gameState.gameClear then
+    Controls.Pause.Boolean = false
+    return
+  end
+
+  GameTimer:Stop()
+  gameState.paused = true
+  RenderGameFrame()
+  UpdateSceneTelemetry()
+  Controls.MeasuredHz.String = "PAUSED"
+  Controls.Status.String = "PAUSED"
+end
+
+local function ResumeGame()
+  if not gameState.running then
+    Controls.Pause.Boolean = false
+    return
+  end
+
+  gameState.paused = false
+  ResetMeasurement()
+  RenderGameFrame()
+  UpdateSceneTelemetry()
+  Controls.Status.String = "RUNNING"
+  GameTimer:Start(GAME_CONFIG.UpdateInterval)
 end
 
 GameTimer.EventHandler = function()
@@ -185,12 +217,26 @@ Controls.Run.EventHandler = function(control)
   end
 end
 
+Controls.Pause.EventHandler = function(control)
+  if not Controls.Run.Boolean or gameState.gameOver or gameState.gameClear then
+    control.Boolean = false
+    return
+  end
+
+  if control.Boolean then
+    PauseGame()
+  else
+    ResumeGame()
+  end
+end
+
 ResetGameState(gameState)
 EnterStage(gameState, 1)
 ResetEnemies(gameState)
 ResetParallax(gameState, 1)
 GameTimer:Stop()
 Controls.Run.Boolean = false
+Controls.Pause.Boolean = false
 Controls.MeasuredHz.String = "0.0 Hz"
 AssignStageBackground(1)
 RenderGameFrame()
