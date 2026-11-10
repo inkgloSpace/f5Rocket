@@ -90,14 +90,16 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.4.2`
+- Version: `0.5.0`
 - Page: `Game`
 - Logical viewport: 320×480; Q-SYS display size: 480×720
 - Fixed update/render target: 30 Hz
 
 The current slice keeps the proven Toggle Run lifecycle and implements a three-stage campaign: Easy near orbit, Medium AV-tech asteroid space, and the Hard Q-Core arena. Each wave has a stage-local score threshold, a deterministic boss, a 45-tick clear transition, and a static stage background. A bounded three-layer SVG parallax overlay supplies motion without re-encoding the full-screen PNG. The campaign ends with MISSION COMPLETE at a minimum cumulative score of 52,500. One-hit death and Run OFF/ON restart semantics remain unchanged.
 
-Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run` and `Pause` are Toggles; movement and fire remain Momentary controls read directly during each timer tick.
+Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, `Fire`, `UpLeft`, `UpRight`, `DownLeft`, `DownRight`, `AutoFire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run`, `Pause`, and `AutoFire` are Toggles; all direction and manual-fire controls are Momentary.
+
+The four diagonal controls and AutoFire form a smartphone-friendly UCI pad without replacing the original simultaneous engine inputs. Each tick OR-combines the mobile diagonals with `Up`, `Down`, `Left`, and `Right`, and combines `Fire` with `AutoFire`. Contradictory axes still cancel inside the existing player movement code, diagonal speed remains normalized, and the existing fire cooldown remains authoritative.
 
 `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, and `Fire` are also available as Q-SYS input control pins through **Properties → Control Pins**. These pins use the same Control objects as the panel buttons: an external HIGH holds a Momentary movement/fire input, while the Run and Pause Boolean values follow their Toggle semantics. Telemetry and viewport controls are not exposed as pins.
 
@@ -140,6 +142,8 @@ The game build reads the expected PNGs from those folders and generates `plugins
 Generation and 30 Hz embedding are separate concerns. Generated data exposes dynamic-gameplay, static-background, branding, and compatibility-alias groups. The dynamic definitions contain the three player states, three stage enemies, both bullets, three explosion frames, two minibosses, and the final boss. The three full-screen backgrounds are available only to the static background builder. `enemy_01` and `background_tile` remain compatibility aliases and do not drive the campaign.
 
 Each enemy and boss sprite has one reusable downward-facing wrapper definition with a centralized 180-degree transform. Hostile instances select those wrappers and never repeat rotation markup.
+
+Enemy and boss shots use one reusable 12×20 SVG definition with a dark silhouette, magenta body, orange inner glow, and white core. The original enemy-bullet PNG remains in the generated manifest for compatibility, but normal hostile shots render as `<use href="#enemy_bullet_visible">` so the projectile stays legible over all three stage palettes.
 
 Missing PNGs do not fail the build. Dynamic sprites fall back to cached SVG definitions; missing stage backgrounds use a deterministic static fallback generated only when that background is assigned. Invalid files at an expected PNG path do fail the build.
 

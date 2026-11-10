@@ -63,6 +63,22 @@ local function ResetMeasurement()
   Controls.MeasuredHz.String = "MEASURING"
 end
 
+-- Mobile diagonals and the original physical/pin controls feed the same
+-- booleans. Returning scalars avoids allocating an input table every tick.
+local function ReadGameInput()
+  local up = Controls.Up.Boolean or
+    Controls.UpLeft.Boolean or Controls.UpRight.Boolean
+  local down = Controls.Down.Boolean or
+    Controls.DownLeft.Boolean or Controls.DownRight.Boolean
+  local left = Controls.Left.Boolean or
+    Controls.UpLeft.Boolean or Controls.DownLeft.Boolean
+  local right = Controls.Right.Boolean or
+    Controls.UpRight.Boolean or Controls.DownRight.Boolean
+  local fire = Controls.Fire.Boolean or Controls.AutoFire.Boolean
+
+  return up, down, left, right, fire
+end
+
 local function UpdateGameState()
   if not gameState.running or gameState.paused then
     return
@@ -86,15 +102,18 @@ local function UpdateGameState()
     return
   end
 
+  local upPressed, downPressed, leftPressed, rightPressed, firePressed =
+    ReadGameInput()
+
   UpdatePlayer(
     gameState,
-    Controls.Left.Boolean,
-    Controls.Right.Boolean,
-    Controls.Up.Boolean,
-    Controls.Down.Boolean
+    leftPressed,
+    rightPressed,
+    upPressed,
+    downPressed
   )
 
-  if Controls.Fire.Boolean then
+  if firePressed then
     FirePlayerBullet(gameState)
   end
 

@@ -27,8 +27,8 @@ local function FireEnemyVectorBullet(state, startX, startY, vx, vy)
     local bullet = state.enemyBullets[index]
     if not bullet.active then
       bullet.active = true
-      bullet.x = startX - bullet.width / 2
-      bullet.y = startY
+      bullet.x = math.floor(startX - bullet.width / 2)
+      bullet.y = math.floor(startY)
       bullet.vx = vx
       bullet.vy = vy
       return true

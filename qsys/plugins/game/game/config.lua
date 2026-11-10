@@ -25,8 +25,8 @@ local GAME_CONFIG = {
   EnemyFireSafetyDistance = 72,
   EnemyFireRetryTicks = 5,
 
-  EnemyBulletWidth = 10,
-  EnemyBulletHeight = 16,
+  EnemyBulletWidth = 12,
+  EnemyBulletHeight = 20,
 
   ExplosionWidth = 44,
   ExplosionHeight = 44,

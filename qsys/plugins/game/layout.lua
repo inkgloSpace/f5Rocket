@@ -92,16 +92,31 @@ if currentPage == 1 then
     }
   end
 
-  AddButton("Up", 594, 120, 60, 44, "UP")
-  AddButton("Left", 522, 170, 60, 44, "LEFT")
-  AddButton("Down", 594, 170, 60, 44, "DOWN")
-  AddButton("Right", 666, 170, 60, 44, "RIGHT")
-  AddButton("Fire", 522, 228, 204, 46, "FIRE")
+  AddButton("UpLeft", 514, 120, 64, 44, "UL")
+  AddButton("Up", 586, 120, 64, 44, "UP")
+  AddButton("UpRight", 658, 120, 64, 44, "UR")
+  AddButton("Left", 514, 170, 64, 44, "LEFT")
+  AddButton("Right", 658, 170, 64, 44, "RIGHT")
+  AddButton("DownLeft", 514, 220, 64, 44, "DL")
+  AddButton("Down", 586, 220, 64, 44, "DOWN")
+  AddButton("DownRight", 658, 220, 64, 44, "DR")
+  AddButton("Fire", 514, 278, 105, 46, "FIRE")
+
+  layout["AutoFire"] = {
+    PrettyName = "Game~Auto Fire",
+    Style = "Button",
+    ButtonStyle = "Toggle",
+    ButtonVisualStyle = "Flat",
+    Position = { 631, 278 },
+    Size = { 105, 46 },
+    Color = { 255, 92, 157 },
+    Legend = "AUTO FIRE"
+  }
 
   layout["Status"] = {
     PrettyName = "Game~Status",
     Style = "Text",
-    Position = { 514, 292 },
+    Position = { 514, 342 },
     Size = { 222, 50 },
     IsReadOnly = true,
     FontSize = 9,
@@ -132,15 +147,15 @@ if currentPage == 1 then
     }
   end
 
-  AddLabel("Measured", 374)
-  AddLabel("SVG bytes", 404)
-  AddLabel("Base64 bytes", 434)
-  AddLabel("Enemies", 464)
-  AddLabel("Player bullets", 494)
+  AddLabel("Measured", 424)
+  AddLabel("SVG bytes", 454)
+  AddLabel("Base64 bytes", 484)
+  AddLabel("Enemies", 514)
+  AddLabel("Player bullets", 544)
 
-  AddReadout("MeasuredHz", 372)
-  AddReadout("SvgBytes", 402)
-  AddReadout("SvgBase64Bytes", 432)
-  AddReadout("ActiveEnemies", 462)
-  AddReadout("ActivePlayerBullets", 492)
+  AddReadout("MeasuredHz", 422)
+  AddReadout("SvgBytes", 452)
+  AddReadout("SvgBase64Bytes", 482)
+  AddReadout("ActiveEnemies", 512)
+  AddReadout("ActivePlayerBullets", 542)
 end

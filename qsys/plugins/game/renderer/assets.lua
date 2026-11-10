@@ -6,7 +6,7 @@ local ASSET_MANIFEST = {
   { Id = "enemy_medium", Source = "assets/enemy/enemy_medium.png", Width = 34, Height = 34 },
   { Id = "enemy_hard", Source = "assets/enemy/enemy_hard.png", Width = 34, Height = 34 },
   { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 10, Height = 22 },
-  { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 10, Height = 16 },
+  { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 12, Height = 20 },
   { Id = "explosion_01", Source = "assets/explosion/explosion_01.png", Width = 44, Height = 44 },
   { Id = "explosion_02", Source = "assets/explosion/explosion_02.png", Width = 44, Height = 44 },
   { Id = "explosion_03", Source = "assets/explosion/explosion_03.png", Width = 44, Height = 44 },
@@ -36,8 +36,15 @@ local FALLBACK_ENEMY_DEFINITION =
 local FALLBACK_PLAYER_BULLET_DEFINITION =
   "<g id=\"fallback_player_bullet\"><rect width=\"10\" height=\"22\" fill=\"#5ffcff\"/></g>"
 
-local FALLBACK_ENEMY_BULLET_DEFINITION =
-  "<g id=\"fallback_enemy_bullet\"><rect width=\"10\" height=\"16\" fill=\"#ff6b9d\"/></g>"
+-- Hostile shots deliberately use SVG geometry rather than the small source
+-- PNG so their silhouette and hot core remain readable on every stage.
+local ENEMY_BULLET_VISIBLE_DEFINITION =
+  "<g id=\"enemy_bullet_visible\">" ..
+  "<rect x=\"0\" y=\"0\" width=\"12\" height=\"20\" rx=\"6\" fill=\"#140818\"/>" ..
+  "<rect x=\"1\" y=\"1\" width=\"10\" height=\"18\" rx=\"5\" fill=\"#ff315f\"/>" ..
+  "<rect x=\"3\" y=\"2\" width=\"6\" height=\"16\" rx=\"3\" fill=\"#ffb52e\"/>" ..
+  "<rect x=\"5\" y=\"4\" width=\"2\" height=\"11\" fill=\"#ffffff\"/>" ..
+  "</g>"
 
 local FALLBACK_EXPLOSION_DEFINITION =
   "<g id=\"fallback_explosion\"><path d=\"M22 0L27 15L44 22L27 29L22 44L17 29L0 22L17 15Z\" fill=\"#ff9b45\"/></g>"
@@ -120,7 +127,7 @@ local BOSS_ORIENTATION_DEFINITIONS = table.concat({
 
 local DYNAMIC_GAMEPLAY_DEFINITIONS = table.concat(DYNAMIC_DEFINITION_PARTS) ..
   FALLBACK_PLAYER_DEFINITION .. FALLBACK_ENEMY_DEFINITION ..
-  FALLBACK_PLAYER_BULLET_DEFINITION .. FALLBACK_ENEMY_BULLET_DEFINITION ..
+  FALLBACK_PLAYER_BULLET_DEFINITION .. ENEMY_BULLET_VISIBLE_DEFINITION ..
   FALLBACK_EXPLOSION_DEFINITION .. FALLBACK_BOSS_EASY_DEFINITION ..
   FALLBACK_BOSS_MEDIUM_DEFINITION .. FALLBACK_BOSS_FINAL_DEFINITION ..
   ENEMY_ORIENTATION_DEFINITIONS .. BOSS_ORIENTATION_DEFINITIONS

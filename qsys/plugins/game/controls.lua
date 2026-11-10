@@ -85,6 +85,46 @@ table.insert(controls, {
 })
 
 table.insert(controls, {
+  Name = "UpLeft",
+  ControlType = "Button",
+  ButtonType = "Momentary",
+  DefaultValue = false,
+  Count = 1
+})
+
+table.insert(controls, {
+  Name = "UpRight",
+  ControlType = "Button",
+  ButtonType = "Momentary",
+  DefaultValue = false,
+  Count = 1
+})
+
+table.insert(controls, {
+  Name = "DownLeft",
+  ControlType = "Button",
+  ButtonType = "Momentary",
+  DefaultValue = false,
+  Count = 1
+})
+
+table.insert(controls, {
+  Name = "DownRight",
+  ControlType = "Button",
+  ButtonType = "Momentary",
+  DefaultValue = false,
+  Count = 1
+})
+
+table.insert(controls, {
+  Name = "AutoFire",
+  ControlType = "Button",
+  ButtonType = "Toggle",
+  DefaultValue = false,
+  Count = 1
+})
+
+table.insert(controls, {
   Name = "MeasuredHz",
   ControlType = "Text",
   DefaultValue = "0.0 Hz",

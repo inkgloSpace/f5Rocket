@@ -46,7 +46,7 @@ local function AppendPlayerBullet(parts, bullet)
 end
 
 local function AppendEnemyBullet(parts, bullet)
-  AppendSpriteUse(parts, "bullet_enemy", "fallback_enemy_bullet", bullet.x, bullet.y)
+  AppendDefinitionUse(parts, "enemy_bullet_visible", bullet.x, bullet.y)
 end
 
 local function AppendPlayer(parts, player)
