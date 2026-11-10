@@ -59,7 +59,7 @@ PNG file
 
 The SVG renderer only consumes state and the immutable asset catalog; it does not calculate gameplay or re-read/re-encode PNG files. Scene order is background, decoration, enemies, enemy bullets, player bullets, player, explosions, then HUD. Sprite positions are rounded to integer logical pixels, and the browser scales the fixed SVG with pixelated image rendering.
 
-The generated SVG is self-contained when PNGs are present. The production Q-SYS flow uses two aligned Button controls: a low-frequency static stage background and a transparent 30 Hz gameplay overlay. Lua allowlists active gameplay PNGs for SVG `<defs>`, caches geometric fallbacks, emits sprites with `<use href="#...">`, Base64-encodes the overlay once per frame, and assigns it through dynamic `IconData`. Full-screen background data never enters the timer hot path.
+The generated SVG is self-contained when PNGs are present. The production Q-SYS flow uses two aligned Button controls: a low-frequency static stage background and a transparent 30 Hz gameplay overlay. Lua allowlists active gameplay PNGs for SVG `<defs>`, caches geometric fallbacks, and places deterministic FAR/MID/NEAR parallax geometry plus sprites with `<use href="#...">`. The overlay is Base64-encoded once per frame and assigned through dynamic `IconData`; full-screen background data never enters the timer hot path.
 
 Telemetry reports raw UTF-8 SVG bytes, the mathematically correct Base64 SVG length (`4 × ceil(raw bytes / 3)`), unique cached PNG data-URI bytes, active objects, and average browser SVG generation time. Raw SVG size already includes every embedded PNG data URI used by the scene; the separate asset metric counts each configured cached asset once.
 
@@ -121,7 +121,7 @@ window.__f5Rocket.benchmarkStressLevels(120)
 ## Current limitations
 
 - The browser prototype still omits collision scoring; the Q-SYS production slice implements player-bullet/enemy AABB scoring independently.
-- The production campaign has three enemy profiles, two minibosses, a final boss, one-hit death, and deterministic stage progression, but no lives, respawn, power-ups, sound, or menu system.
+- The production campaign has three enemy and parallax profiles, two minibosses, a final boss, one-hit death, and deterministic stage progression, but no lives, respawn, power-ups, sound, or menu system.
 - Full-screen stage backgrounds are assigned through a separate static Q-SYS viewport only at initialization, restart, or stage transition; they are deliberately excluded from the 30 Hz gameplay frame.
 - Q-SYS Designer validation does not establish physical Core CPU or final artwork payload limits.
 - Browser input is keyboard-only; Q-SYS input uses plugin controls.
@@ -130,6 +130,6 @@ window.__f5Rocket.benchmarkStressLevels(120)
 
 1. **Local technical prototype:** browser movement, fire pooling, scrolling background, generated SVG, placeholders, and telemetry.
 2. **Q-SYS compatibility probe:** completed in Designer 10.5.0; 64 `<use href>` instances remained stable at 30 Hz.
-3. **Production campaign (current):** Easy/Medium/Hard waves, stage backgrounds, deterministic bosses, death/clear states, generated SVG, and bounded pools.
+3. **Production campaign (current):** Easy/Medium/Hard waves, static stage backgrounds, hybrid parallax, deterministic bosses, death/clear states, generated SVG, and bounded pools.
 4. **Designer tuning:** validate background layering, stage pacing, boss patterns, and artwork contrast in Q-SYS Designer.
 5. **Core validation and gameplay growth:** verify physical Core limits before adding lives, power-ups, sound, or further progression.

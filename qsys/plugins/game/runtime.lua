@@ -69,6 +69,8 @@ local function UpdateGameState()
     return
   end
 
+  UpdateParallax(gameState)
+
   if gameState.gameOver then
     AdvanceGameOverAnimation(gameState)
     return
@@ -79,6 +81,7 @@ local function UpdateGameState()
     local nextStage = AdvanceStageClear(gameState)
     if nextStage ~= nil then
       ResetEnemies(gameState)
+      ResetParallax(gameState, nextStage)
       AssignStageBackground(nextStage)
     end
     return
@@ -141,6 +144,7 @@ local function StartGame()
   ResetGameState(gameState)
   EnterStage(gameState, 1)
   ResetEnemies(gameState)
+  ResetParallax(gameState, 1)
   gameState.running = true
   ResetMeasurement()
   AssignStageBackground(1)
@@ -184,6 +188,7 @@ end
 ResetGameState(gameState)
 EnterStage(gameState, 1)
 ResetEnemies(gameState)
+ResetParallax(gameState, 1)
 GameTimer:Stop()
 Controls.Run.Boolean = false
 Controls.MeasuredHz.String = "0.0 Hz"

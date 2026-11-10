@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.4.0",
-  BuildVersion = "0.4.0.0",
+  Version = "0.4.1",
+  BuildVersion = "0.4.1.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -339,7 +339,54 @@ if Controls then
     MaxEnemies = 8,
     MaxPlayerBullets = 24,
     MaxEnemyBullets = 32,
-    MaxExplosions = 12
+    MaxExplosions = 12,
+
+    MaxFarParallax = 24,
+    MaxMidParallax = 12,
+    MaxNearParallax = 8,
+    BossParallaxMultiplier = 0.35,
+    StageClearParallaxMultiplier = 0.20,
+    GameOverParallaxMultiplier = 0.15,
+    GameClearParallaxMultiplier = 0.10
+  }
+
+  local PARALLAX_PROFILES = {
+    [1] = {
+      Name = "EASY",
+      FarCount = 20,
+      FarSpeedMin = 0.25,
+      FarSpeedMax = 0.40,
+      MidCount = 6,
+      MidSpeedMin = 0.60,
+      MidSpeedMax = 0.90,
+      NearCount = 2,
+      NearSpeedMin = 1.20,
+      NearSpeedMax = 1.50
+    },
+    [2] = {
+      Name = "MEDIUM",
+      FarCount = 18,
+      FarSpeedMin = 0.35,
+      FarSpeedMax = 0.55,
+      MidCount = 10,
+      MidSpeedMin = 0.90,
+      MidSpeedMax = 1.30,
+      NearCount = 4,
+      NearSpeedMin = 1.80,
+      NearSpeedMax = 2.20
+    },
+    [3] = {
+      Name = "HARD",
+      FarCount = 16,
+      FarSpeedMin = 0.45,
+      FarSpeedMax = 0.70,
+      MidCount = 10,
+      MidSpeedMin = 1.20,
+      MidSpeedMax = 1.70,
+      NearCount = 6,
+      NearSpeedMin = 2.50,
+      NearSpeedMax = 3.20
+    }
   }
 
   local STAGE_PROFILES = {
@@ -900,7 +947,12 @@ if Controls then
       enemies = {},
       playerBullets = {},
       enemyBullets = {},
-      explosions = {}
+      explosions = {},
+      parallax = {
+        far = {},
+        mid = {},
+        near = {}
+      }
     }
 
     for index = 1, GAME_CONFIG.MaxEnemies do
@@ -946,6 +998,45 @@ if Controls then
         frame = 1,
         frameTicksRemaining = 0,
         delayTicks = 0
+      }
+    end
+
+    for index = 1, GAME_CONFIG.MaxFarParallax do
+      state.parallax.far[index] = {
+        active = false,
+        x = 0,
+        y = 0,
+        speed = 0,
+        variant = 1,
+        slot = index,
+        cycle = 0,
+        driftX = 0
+      }
+    end
+
+    for index = 1, GAME_CONFIG.MaxMidParallax do
+      state.parallax.mid[index] = {
+        active = false,
+        x = 0,
+        y = 0,
+        speed = 0,
+        variant = 1,
+        slot = index,
+        cycle = 0,
+        driftX = 0
+      }
+    end
+
+    for index = 1, GAME_CONFIG.MaxNearParallax do
+      state.parallax.near[index] = {
+        active = false,
+        x = 0,
+        y = 0,
+        speed = 0,
+        variant = 1,
+        slot = index,
+        cycle = 0,
+        driftX = 0
       }
     end
 
@@ -1027,6 +1118,24 @@ if Controls then
       explosion.frameTicksRemaining = 0
       explosion.delayTicks = 0
     end
+
+
+    local function ResetParallaxPool(pool, maximum)
+      for index = 1, maximum do
+        local item = pool[index]
+        item.active = false
+        item.x = 0
+        item.y = 0
+        item.speed = 0
+        item.variant = 1
+        item.cycle = 0
+        item.driftX = 0
+      end
+    end
+
+    ResetParallaxPool(state.parallax.far, GAME_CONFIG.MaxFarParallax)
+    ResetParallaxPool(state.parallax.mid, GAME_CONFIG.MaxMidParallax)
+    ResetParallaxPool(state.parallax.near, GAME_CONFIG.MaxNearParallax)
   end
   local function ClampInteger(value, minimum, maximum)
     if value < minimum then
@@ -1284,6 +1393,171 @@ if Controls then
 
     state.campaignFrozen = true
     return nil
+  end
+  local PARALLAX_LAYER_FAR = 1
+  local PARALLAX_LAYER_MID = 2
+  local PARALLAX_LAYER_NEAR = 3
+
+  local function ParallaxLayerSettings(profile, layer)
+    if layer == PARALLAX_LAYER_FAR then
+      return profile.FarCount, profile.FarSpeedMin, profile.FarSpeedMax, 4
+    elseif layer == PARALLAX_LAYER_MID then
+      return profile.MidCount, profile.MidSpeedMin, profile.MidSpeedMax, 16
+    end
+    return profile.NearCount, profile.NearSpeedMin, profile.NearSpeedMax, 24
+  end
+
+  local function ConfigureParallaxItem(item, stageIndex, layer, initialPosition)
+    local profile = PARALLAX_PROFILES[stageIndex]
+    local _, minimumSpeed, maximumSpeed, margin =
+      ParallaxLayerSettings(profile, layer)
+    local layerSeed = layer * 23
+    local speedStep = (
+      item.slot * 7 + item.cycle * 5 + stageIndex * 3 + layerSeed
+    ) % 7
+
+    item.x = (
+      item.slot * 47 + item.cycle * 31 + stageIndex * 19 + layerSeed
+    ) % GAME_CONFIG.LogicalWidth
+
+    if initialPosition then
+      item.y = (
+        item.slot * (61 + layerSeed) + stageIndex * 41
+      ) % GAME_CONFIG.LogicalHeight
+    else
+      item.y = -margin - (
+        item.slot * 17 + item.cycle * 13 + stageIndex * 11
+      ) % 96
+    end
+
+    item.speed = minimumSpeed +
+      (maximumSpeed - minimumSpeed) * speedStep / 6
+    item.variant = 1 + (
+      item.slot + item.cycle + stageIndex + layer
+    ) % 2
+
+    if layer == PARALLAX_LAYER_FAR then
+      item.driftX = 0
+    else
+      item.driftX = (
+        (item.slot + item.cycle + stageIndex) % 3 - 1
+      ) * 0.25
+    end
+
+    -- Keep the flight lane comparatively clean while allowing sparse edge
+    -- streaks to provide the strongest foreground speed cue.
+    if layer == PARALLAX_LAYER_NEAR and item.x > 112 and item.x < 208 then
+      item.x = (item.x + 128) % GAME_CONFIG.LogicalWidth
+    end
+  end
+
+  local function ResetParallaxLayer(pool, maximum, activeCount, stageIndex, layer)
+    for index = 1, maximum do
+      local item = pool[index]
+      item.active = index <= activeCount
+      item.cycle = 0
+      if item.active then
+        ConfigureParallaxItem(item, stageIndex, layer, true)
+      end
+    end
+  end
+
+  local function ResetParallax(state, stageIndex)
+    local profile = PARALLAX_PROFILES[stageIndex]
+    ResetParallaxLayer(
+      state.parallax.far,
+      GAME_CONFIG.MaxFarParallax,
+      profile.FarCount,
+      stageIndex,
+      PARALLAX_LAYER_FAR
+    )
+    ResetParallaxLayer(
+      state.parallax.mid,
+      GAME_CONFIG.MaxMidParallax,
+      profile.MidCount,
+      stageIndex,
+      PARALLAX_LAYER_MID
+    )
+    ResetParallaxLayer(
+      state.parallax.near,
+      GAME_CONFIG.MaxNearParallax,
+      profile.NearCount,
+      stageIndex,
+      PARALLAX_LAYER_NEAR
+    )
+  end
+
+  local function ParallaxSpeedMultiplier(state)
+    if state.gameOver then
+      return GAME_CONFIG.GameOverParallaxMultiplier
+    elseif state.gameClear then
+      return GAME_CONFIG.GameClearParallaxMultiplier
+    elseif state.stagePhase == "CLEAR" then
+      return GAME_CONFIG.StageClearParallaxMultiplier
+    elseif state.stagePhase == "BOSS" then
+      return GAME_CONFIG.BossParallaxMultiplier
+    end
+    return 1
+  end
+
+  local function UpdateParallaxLayer(
+      pool,
+      maximum,
+      state,
+      layer,
+      multiplier
+    )
+    local _, _, _, margin =
+      ParallaxLayerSettings(PARALLAX_PROFILES[state.stageIndex], layer)
+
+    for index = 1, maximum do
+      local item = pool[index]
+      if item.active then
+        item.x = item.x + item.driftX * multiplier
+        item.y = item.y + item.speed * multiplier
+
+        if item.x < -margin then
+          item.x = GAME_CONFIG.LogicalWidth + margin
+        elseif item.x > GAME_CONFIG.LogicalWidth + margin then
+          item.x = -margin
+        end
+
+        if item.y > GAME_CONFIG.LogicalHeight + margin then
+          item.cycle = item.cycle + 1
+          ConfigureParallaxItem(
+            item,
+            state.stageIndex,
+            layer,
+            false
+          )
+        end
+      end
+    end
+  end
+
+  local function UpdateParallax(state)
+    local multiplier = ParallaxSpeedMultiplier(state)
+    UpdateParallaxLayer(
+      state.parallax.far,
+      GAME_CONFIG.MaxFarParallax,
+      state,
+      PARALLAX_LAYER_FAR,
+      multiplier
+    )
+    UpdateParallaxLayer(
+      state.parallax.mid,
+      GAME_CONFIG.MaxMidParallax,
+      state,
+      PARALLAX_LAYER_MID,
+      multiplier
+    )
+    UpdateParallaxLayer(
+      state.parallax.near,
+      GAME_CONFIG.MaxNearParallax,
+      state,
+      PARALLAX_LAYER_NEAR,
+      multiplier
+    )
   end
   local function EnemyFireDelay(enemy, initialSpawn, profile)
     if initialSpawn then
@@ -1717,13 +1991,97 @@ if Controls then
       KillPlayer(state)
     end
   end
+  local PARALLAX_SVG_DEFINITIONS = table.concat({
+    -- Easy: calm blue/white stars, tiny technical fragments, sparse cyan passes.
+    "<g id=\"parallax_easy_star_dim\"><rect width=\"1\" height=\"1\" fill=\"#78bdf2\"/></g>",
+    "<g id=\"parallax_easy_star_bright\"><circle cx=\"1\" cy=\"1\" r=\"1\" fill=\"#e8fbff\"/></g>",
+    "<g id=\"parallax_easy_tech_a\"><rect width=\"5\" height=\"2\" fill=\"#55d9ff\"/><rect x=\"2\" y=\"-2\" width=\"1\" height=\"6\" fill=\"#8af4ff\"/></g>",
+    "<g id=\"parallax_easy_tech_b\"><polygon points=\"0,2 3,0 7,2 3,4\" fill=\"#4a8fce\"/></g>",
+    "<g id=\"parallax_easy_near_a\"><rect width=\"2\" height=\"12\" fill=\"#66f5ff\"/></g>",
+    "<g id=\"parallax_easy_near_b\"><polygon points=\"0,0 5,2 2,7\" fill=\"#8fd9ed\"/></g>",
+
+    -- Medium: purple/cyan stars plus visibly larger asteroid fragments.
+    "<g id=\"parallax_medium_star_dim\"><rect width=\"1\" height=\"1\" fill=\"#9b64d9\"/></g>",
+    "<g id=\"parallax_medium_star_bright\"><circle cx=\"1\" cy=\"1\" r=\"1\" fill=\"#61efff\"/></g>",
+    "<g id=\"parallax_asteroid_small\"><polygon points=\"1,0 6,1 8,5 5,8 0,6\" fill=\"#70448f\" stroke=\"#b47ada\"/></g>",
+    "<g id=\"parallax_asteroid_medium\"><polygon points=\"2,0 9,1 12,6 8,11 2,10 0,4\" fill=\"#4f315f\" stroke=\"#d052ad\"/></g>",
+    "<g id=\"parallax_medium_near_rock\"><polygon points=\"2,0 11,2 14,8 8,12 0,9\" fill=\"#563260\" stroke=\"#ad62bd\"/></g>",
+    "<g id=\"parallax_medium_particle\"><circle cx=\"2\" cy=\"2\" r=\"2\" fill=\"#ff54c8\"/></g>",
+
+    -- Hard: dark mechanical debris and fast cyan/magenta energy fragments.
+    "<g id=\"parallax_hard_star_dim\"><rect width=\"1\" height=\"1\" fill=\"#46506d\"/></g>",
+    "<g id=\"parallax_hard_star_bright\"><rect width=\"2\" height=\"2\" fill=\"#ff4eb7\"/></g>",
+    "<g id=\"parallax_hard_mech_a\"><path d=\"M0 1H9V4H6V7H2V4H0Z\" fill=\"#272d4f\" stroke=\"#4bd9e8\"/></g>",
+    "<g id=\"parallax_hard_mech_b\"><rect width=\"11\" height=\"3\" fill=\"#39234e\"/><rect x=\"7\" y=\"3\" width=\"3\" height=\"5\" fill=\"#e348a5\"/></g>",
+    "<g id=\"parallax_energy_streak\"><rect width=\"3\" height=\"18\" fill=\"#45f4ff\"/></g>",
+    "<g id=\"parallax_data_fragment\"><rect width=\"7\" height=\"3\" fill=\"#ff4eb7\"/><rect x=\"2\" y=\"3\" width=\"2\" height=\"7\" fill=\"#6bdcff\"/></g>"
+  })
+
+  local PARALLAX_RENDER_PROFILES = {
+    [1] = {
+      Far = { "parallax_easy_star_dim", "parallax_easy_star_bright" },
+      Mid = { "parallax_easy_tech_a", "parallax_easy_tech_b" },
+      Near = { "parallax_easy_near_a", "parallax_easy_near_b" }
+    },
+    [2] = {
+      Far = { "parallax_medium_star_dim", "parallax_medium_star_bright" },
+      Mid = { "parallax_asteroid_small", "parallax_asteroid_medium" },
+      Near = { "parallax_medium_near_rock", "parallax_medium_particle" }
+    },
+    [3] = {
+      Far = { "parallax_hard_star_dim", "parallax_hard_star_bright" },
+      Mid = { "parallax_hard_mech_a", "parallax_hard_mech_b" },
+      Near = { "parallax_energy_streak", "parallax_data_fragment" }
+    }
+  }
+
+  local function AppendParallaxLayer(parts, pool, maximum, definitions)
+    for index = 1, maximum do
+      local item = pool[index]
+      if item.active then
+        AppendDefinitionUse(
+          parts,
+          definitions[item.variant],
+          item.x,
+          item.y
+        )
+      end
+    end
+  end
+
+  local function AppendFarParallax(parts, state)
+    AppendParallaxLayer(
+      parts,
+      state.parallax.far,
+      GAME_CONFIG.MaxFarParallax,
+      PARALLAX_RENDER_PROFILES[state.stageIndex].Far
+    )
+  end
+
+  local function AppendMidParallax(parts, state)
+    AppendParallaxLayer(
+      parts,
+      state.parallax.mid,
+      GAME_CONFIG.MaxMidParallax,
+      PARALLAX_RENDER_PROFILES[state.stageIndex].Mid
+    )
+  end
+
+  local function AppendNearParallax(parts, state)
+    AppendParallaxLayer(
+      parts,
+      state.parallax.near,
+      GAME_CONFIG.MaxNearParallax,
+      PARALLAX_RENDER_PROFILES[state.stageIndex].Near
+    )
+  end
   local SVG_ROOT_OPEN =
     "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">"
 
   -- The dynamic frame is intentionally transparent. Stage artwork lives in the
   -- low-frequency BackgroundViewport and is never copied into this prefix.
   local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" ..
-    DYNAMIC_GAMEPLAY_DEFINITIONS .. "</defs>"
+    DYNAMIC_GAMEPLAY_DEFINITIONS .. PARALLAX_SVG_DEFINITIONS .. "</defs>"
 
   local FALLBACK_BACKGROUND_COLORS = {
     [1] = "#083b69",
@@ -1819,6 +2177,10 @@ if Controls then
   local function BuildGameSvg(state)
     local parts = { GAME_SVG_PREFIX }
 
+    AppendFarParallax(parts, state)
+    AppendMidParallax(parts, state)
+    AppendNearParallax(parts, state)
+
     for index = 1, GAME_CONFIG.MaxEnemies do
       local enemy = state.enemies[index]
       if enemy.active then
@@ -1844,15 +2206,15 @@ if Controls then
       end
     end
 
-    if state.player.alive then
-      AppendPlayer(parts, state.player)
-    end
-
     for index = 1, GAME_CONFIG.MaxExplosions do
       local explosion = state.explosions[index]
       if explosion.active and explosion.delayTicks <= 0 then
         AppendExplosion(parts, explosion)
       end
+    end
+
+    if state.player.alive then
+      AppendPlayer(parts, state.player)
     end
 
     AppendHud(parts, state)
@@ -1942,6 +2304,8 @@ if Controls then
       return
     end
 
+    UpdateParallax(gameState)
+
     if gameState.gameOver then
       AdvanceGameOverAnimation(gameState)
       return
@@ -1952,6 +2316,7 @@ if Controls then
       local nextStage = AdvanceStageClear(gameState)
       if nextStage ~= nil then
         ResetEnemies(gameState)
+        ResetParallax(gameState, nextStage)
         AssignStageBackground(nextStage)
       end
       return
@@ -2014,6 +2379,7 @@ if Controls then
     ResetGameState(gameState)
     EnterStage(gameState, 1)
     ResetEnemies(gameState)
+    ResetParallax(gameState, 1)
     gameState.running = true
     ResetMeasurement()
     AssignStageBackground(1)
@@ -2057,6 +2423,7 @@ if Controls then
   ResetGameState(gameState)
   EnterStage(gameState, 1)
   ResetEnemies(gameState)
+  ResetParallax(gameState, 1)
   GameTimer:Stop()
   Controls.Run.Boolean = false
   Controls.MeasuredHz.String = "0.0 Hz"

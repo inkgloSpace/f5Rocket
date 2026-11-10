@@ -49,10 +49,12 @@ if Controls then
   --[[ #include "game/player.lua" ]]
   --[[ #include "game/bullets.lua" ]]
   --[[ #include "game/stages.lua" ]]
+  --[[ #include "game/parallax.lua" ]]
   --[[ #include "game/enemies.lua" ]]
   --[[ #include "game/explosions.lua" ]]
   --[[ #include "game/bosses.lua" ]]
   --[[ #include "game/collision.lua" ]]
+  --[[ #include "renderer/parallax_svg.lua" ]]
   --[[ #include "renderer/svg.lua" ]]
   --[[ #include "runtime.lua" ]]
 end

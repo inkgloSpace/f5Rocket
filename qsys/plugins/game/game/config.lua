@@ -38,7 +38,54 @@ local GAME_CONFIG = {
   MaxEnemies = 8,
   MaxPlayerBullets = 24,
   MaxEnemyBullets = 32,
-  MaxExplosions = 12
+  MaxExplosions = 12,
+
+  MaxFarParallax = 24,
+  MaxMidParallax = 12,
+  MaxNearParallax = 8,
+  BossParallaxMultiplier = 0.35,
+  StageClearParallaxMultiplier = 0.20,
+  GameOverParallaxMultiplier = 0.15,
+  GameClearParallaxMultiplier = 0.10
+}
+
+local PARALLAX_PROFILES = {
+  [1] = {
+    Name = "EASY",
+    FarCount = 20,
+    FarSpeedMin = 0.25,
+    FarSpeedMax = 0.40,
+    MidCount = 6,
+    MidSpeedMin = 0.60,
+    MidSpeedMax = 0.90,
+    NearCount = 2,
+    NearSpeedMin = 1.20,
+    NearSpeedMax = 1.50
+  },
+  [2] = {
+    Name = "MEDIUM",
+    FarCount = 18,
+    FarSpeedMin = 0.35,
+    FarSpeedMax = 0.55,
+    MidCount = 10,
+    MidSpeedMin = 0.90,
+    MidSpeedMax = 1.30,
+    NearCount = 4,
+    NearSpeedMin = 1.80,
+    NearSpeedMax = 2.20
+  },
+  [3] = {
+    Name = "HARD",
+    FarCount = 16,
+    FarSpeedMin = 0.45,
+    FarSpeedMax = 0.70,
+    MidCount = 10,
+    MidSpeedMin = 1.20,
+    MidSpeedMax = 1.70,
+    NearCount = 6,
+    NearSpeedMin = 2.50,
+    NearSpeedMax = 3.20
+  }
 }
 
 local STAGE_PROFILES = {

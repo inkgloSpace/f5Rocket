@@ -35,7 +35,12 @@ local function CreateGameState()
     enemies = {},
     playerBullets = {},
     enemyBullets = {},
-    explosions = {}
+    explosions = {},
+    parallax = {
+      far = {},
+      mid = {},
+      near = {}
+    }
   }
 
   for index = 1, GAME_CONFIG.MaxEnemies do
@@ -81,6 +86,45 @@ local function CreateGameState()
       frame = 1,
       frameTicksRemaining = 0,
       delayTicks = 0
+    }
+  end
+
+  for index = 1, GAME_CONFIG.MaxFarParallax do
+    state.parallax.far[index] = {
+      active = false,
+      x = 0,
+      y = 0,
+      speed = 0,
+      variant = 1,
+      slot = index,
+      cycle = 0,
+      driftX = 0
+    }
+  end
+
+  for index = 1, GAME_CONFIG.MaxMidParallax do
+    state.parallax.mid[index] = {
+      active = false,
+      x = 0,
+      y = 0,
+      speed = 0,
+      variant = 1,
+      slot = index,
+      cycle = 0,
+      driftX = 0
+    }
+  end
+
+  for index = 1, GAME_CONFIG.MaxNearParallax do
+    state.parallax.near[index] = {
+      active = false,
+      x = 0,
+      y = 0,
+      speed = 0,
+      variant = 1,
+      slot = index,
+      cycle = 0,
+      driftX = 0
     }
   end
 
@@ -162,4 +206,22 @@ local function ResetGameState(state)
     explosion.frameTicksRemaining = 0
     explosion.delayTicks = 0
   end
+
+
+  local function ResetParallaxPool(pool, maximum)
+    for index = 1, maximum do
+      local item = pool[index]
+      item.active = false
+      item.x = 0
+      item.y = 0
+      item.speed = 0
+      item.variant = 1
+      item.cycle = 0
+      item.driftX = 0
+    end
+  end
+
+  ResetParallaxPool(state.parallax.far, GAME_CONFIG.MaxFarParallax)
+  ResetParallaxPool(state.parallax.mid, GAME_CONFIG.MaxMidParallax)
+  ResetParallaxPool(state.parallax.near, GAME_CONFIG.MaxNearParallax)
 end

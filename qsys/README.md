@@ -90,12 +90,12 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.4.0`
+- Version: `0.4.1`
 - Page: `Game`
 - Logical viewport: 320×480; Q-SYS display size: 480×720
 - Fixed update/render target: 30 Hz
 
-The current slice keeps the proven Toggle Run lifecycle and implements a three-stage campaign: Easy near orbit, Medium AV-tech asteroid space, and the Hard Q-Core arena. Each wave has a stage-local score threshold, a deterministic boss, a 45-tick clear transition, and a static stage background. The campaign ends with MISSION COMPLETE at a minimum cumulative score of 52,500. One-hit death and Run OFF/ON restart semantics remain unchanged.
+The current slice keeps the proven Toggle Run lifecycle and implements a three-stage campaign: Easy near orbit, Medium AV-tech asteroid space, and the Hard Q-Core arena. Each wave has a stage-local score threshold, a deterministic boss, a 45-tick clear transition, and a static stage background. A bounded three-layer SVG parallax overlay supplies motion without re-encoding the full-screen PNG. The campaign ends with MISSION COMPLETE at a minimum cumulative score of 52,500. One-hit death and Run OFF/ON restart semantics remain unchanged.
 
 Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Left`, `Right`, `Up`, `Down`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run` is a Toggle; movement and fire remain Momentary controls read directly during each timer tick.
 
@@ -115,6 +115,7 @@ The production lifecycle now directly follows the proven probes:
 - Disabling `Run` stops the timer, sets `gameState.running` false, and reports `STOPPED`.
 - Each timer tick reads input, updates the existing game state, renders and assigns one transparent gameplay frame, then updates visible telemetry only when the approximately one-second measurement window closes.
 - The background Legend is encoded and assigned only at initialization, new-game reset, and stage transition. It is never touched by the timer hot path.
+- FAR, MID, and NEAR parallax objects are preallocated, update inside the existing timer, and render as lightweight `<use>` instances before all gameplay objects. Boss, clear, death, and completion phases reduce their speed rather than stopping them.
 - No production diagnostic mode, Pause control, whole-tick `pcall`, or additional timer exists. Those diagnostics belong to the separate runtime probe.
 
 ## Shared PNG asset pipeline
@@ -147,15 +148,18 @@ Every frame follows one fixed path:
 stage change → one background SVG/image → BackgroundViewport.IconData
 
 game state → allowlisted gameplay PNG definitions in <defs>
+→ FAR / MID / NEAR geometry <use> instances
 → sprite <use href="#assetId"> or fallback instances
 → one transparent 320×480 gameplay SVG
 → one Crypto.Base64Encode(svg) per frame
 → one Controls.Viewport.Legend assignment per frame
 ```
 
-The selected gameplay PNG and fallback definitions are prepared once. No stage background data URI, opaque full-screen rectangle, or starfield is present in the dynamic SVG. The static background SVG contains exactly one phase background and is only rebuilt at lifecycle boundaries. Runtime performs no filesystem access, network access, or PNG encoding.
+The selected gameplay PNG, fallback, and parallax definitions are prepared once. No stage background data URI or opaque full-screen rectangle is present in the dynamic SVG. The static background SVG contains exactly one phase background and is only rebuilt at lifecycle boundaries. Runtime performs no filesystem access, network access, or PNG encoding.
 
-The current pack produces representative dynamic frames around 40 KB raw and 53 KB after SVG Base64 encoding. These are project observations, not official Q-SYS limits. A centralized 64 KB raw-frame guard rejects an oversized gameplay SVG before Base64 encoding or `Viewport.Legend` assignment. Static background payloads are reported separately when assigned and are not subject to the dynamic guard.
+Parallax profiles are intentionally distinct: Easy uses 20/6/2 slow blue star/tech/near objects; Medium uses 18/10/4 faster purple asteroid objects; Hard uses 16/10/6 aggressive mechanical and cyan-magenta energy objects. The maximum active count is 32 `<use>` nodes. Speed multipliers are 0.35 for bosses, 0.20 for stage clear, 0.15 for game over, and 0.10 for mission complete.
+
+With hybrid parallax active, the current pack produces representative dynamic frames around 44 KB raw and 59 KB after SVG Base64 encoding. Parallax itself adds approximately 3.2–3.5 KB and no more than 32 active `<use>` nodes. These are project observations, not official Q-SYS limits. A centralized 64 KB raw-frame guard rejects an oversized gameplay SVG before Base64 encoding or `Viewport.Legend` assignment. Static background payloads are reported separately when assigned and are not subject to the dynamic guard.
 
 ## Game modules
 
@@ -164,11 +168,13 @@ The current pack produces representative dynamic frames around 40 KB raw and 53 
 - `game/player.lua`: integer movement, viewport constraints, direction, and cooldown
 - `game/bullets.lua`: bounded player/enemy bullet allocation, fixed-vector enemy aiming, motion, and recycling
 - `game/stages.lua`: campaign phase transitions, thresholds, score reset, and bounded-pool cleanup
+- `game/parallax.lua`: deterministic preallocated FAR/MID/NEAR state, recycling, and phase speed multipliers
 - `game/enemies.lua`: profile-driven placement, pursuit steering, staggered fire cooldowns, recycling, and count
 - `game/explosions.lua`: bounded three-frame animation allocation and game-over animation timing
 - `game/bosses.lua`: preallocated boss state, deterministic movement/fire patterns, rewards, and multi-explosion defeat
 - `game/collision.lua`: normal/boss/player AABB collision and campaign scoring rules
 - `renderer/assets.lua`: shared artwork metadata, cached definitions, and asset selection
+- `renderer/parallax_svg.lua`: stage-specific reusable geometry and ordered parallax `<use>` serialization
 - `renderer/svg.lua`: static background serialization plus transparent gameplay/HUD frame serialization
 - `runtime.lua`: proven Toggle lifecycle, one Timer callback, stage orchestration, two centralized Legends, and one-second telemetry
 

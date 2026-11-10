@@ -4,7 +4,7 @@ local SVG_ROOT_OPEN =
 -- The dynamic frame is intentionally transparent. Stage artwork lives in the
 -- low-frequency BackgroundViewport and is never copied into this prefix.
 local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" ..
-  DYNAMIC_GAMEPLAY_DEFINITIONS .. "</defs>"
+  DYNAMIC_GAMEPLAY_DEFINITIONS .. PARALLAX_SVG_DEFINITIONS .. "</defs>"
 
 local FALLBACK_BACKGROUND_COLORS = {
   [1] = "#083b69",
@@ -100,6 +100,10 @@ end
 local function BuildGameSvg(state)
   local parts = { GAME_SVG_PREFIX }
 
+  AppendFarParallax(parts, state)
+  AppendMidParallax(parts, state)
+  AppendNearParallax(parts, state)
+
   for index = 1, GAME_CONFIG.MaxEnemies do
     local enemy = state.enemies[index]
     if enemy.active then
@@ -125,15 +129,15 @@ local function BuildGameSvg(state)
     end
   end
 
-  if state.player.alive then
-    AppendPlayer(parts, state.player)
-  end
-
   for index = 1, GAME_CONFIG.MaxExplosions do
     local explosion = state.explosions[index]
     if explosion.active and explosion.delayTicks <= 0 then
       AppendExplosion(parts, explosion)
     end
+  end
+
+  if state.player.alive then
+    AppendPlayer(parts, state.player)
   end
 
   AppendHud(parts, state)
