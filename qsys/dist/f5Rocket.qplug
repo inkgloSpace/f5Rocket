@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.5.1",
-  BuildVersion = "0.5.1.0",
+  Version = "0.5.2",
+  BuildVersion = "0.5.2.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -64,7 +64,7 @@ function GetControls(props)
   table.insert(controls, {
     Name = "Run",
     ControlType = "Button",
-    ButtonType = "Toggle",
+    ButtonType = "Momentary",
     DefaultValue = false,
     Count = 1,
     UserPin = true,
@@ -172,41 +172,6 @@ function GetControls(props)
   })
 
   table.insert(controls, {
-    Name = "MeasuredHz",
-    ControlType = "Text",
-    DefaultValue = "0.0 Hz",
-    Count = 1
-  })
-
-  table.insert(controls, {
-    Name = "SvgBytes",
-    ControlType = "Text",
-    DefaultValue = "0",
-    Count = 1
-  })
-
-  table.insert(controls, {
-    Name = "SvgBase64Bytes",
-    ControlType = "Text",
-    DefaultValue = "0",
-    Count = 1
-  })
-
-  table.insert(controls, {
-    Name = "ActiveEnemies",
-    ControlType = "Text",
-    DefaultValue = "0",
-    Count = 1
-  })
-
-  table.insert(controls, {
-    Name = "ActivePlayerBullets",
-    ControlType = "Text",
-    DefaultValue = "0",
-    Count = 1
-  })
-
-  table.insert(controls, {
     Name = "Status",
     ControlType = "Text",
     DefaultValue = "READY",
@@ -225,18 +190,9 @@ function GetControlLayout(props)
 
   if currentPage == 1 then
     table.insert(graphics, {
-      Type = "Header",
-      Text = "f5Rocket - Three-Stage Space Campaign",
-      Position = { 8, 8 },
-      Size = { 742, 24 },
-      FontSize = 16,
-      HTextAlign = "Center"
-    })
-
-    table.insert(graphics, {
       Type = "GroupBox",
-      Text = "320 x 480 logical / 480 x 720 display",
-      Position = { 8, 38 },
+      Text = "",
+      Position = { 8, 8 },
       Size = { 480, 720 },
       Fill = { 7, 16, 31 },
       StrokeWidth = 1
@@ -244,8 +200,8 @@ function GetControlLayout(props)
 
     table.insert(graphics, {
       Type = "GroupBox",
-      Text = "Controls and telemetry",
-      Position = { 500, 38 },
+      Text = "Controls",
+      Position = { 500, 8 },
       Size = { 250, 720 },
       Fill = { 238, 241, 245 },
       StrokeWidth = 1
@@ -258,7 +214,7 @@ function GetControlLayout(props)
       Style = "Button",
       ButtonStyle = "Momentary",
       ButtonVisualStyle = "Flat",
-      Position = { 8, 38 },
+      Position = { 8, 8 },
       Size = { 480, 720 },
       Color = { 7, 16, 31 },
       StrokeWidth = 0,
@@ -272,7 +228,7 @@ function GetControlLayout(props)
       Style = "Button",
       ButtonStyle = "Momentary",
       ButtonVisualStyle = "Flat",
-      Position = { 8, 38 },
+      Position = { 8, 8 },
       Size = { 480, 720 },
       StrokeWidth = 0,
       CornerRadius = 0,
@@ -283,9 +239,9 @@ function GetControlLayout(props)
     layout["Run"] = {
       PrettyName = "Game~Run",
       Style = "Button",
-      ButtonStyle = "Toggle",
+      ButtonStyle = "Momentary",
       ButtonVisualStyle = "Flat",
-      Position = { 514, 68 },
+      Position = { 514, 38 },
       Size = { 105, 34 },
       Color = { 70, 230, 225 },
       Legend = "RUN"
@@ -296,7 +252,7 @@ function GetControlLayout(props)
       Style = "Button",
       ButtonStyle = "Toggle",
       ButtonVisualStyle = "Flat",
-      Position = { 631, 68 },
+      Position = { 631, 38 },
       Size = { 105, 34 },
       Color = { 245, 166, 35 },
       Legend = "PAUSE"
@@ -315,22 +271,22 @@ function GetControlLayout(props)
       }
     end
 
-    AddButton("UpLeft", 514, 120, 64, 44, "UL")
-    AddButton("Up", 586, 120, 64, 44, "UP")
-    AddButton("UpRight", 658, 120, 64, 44, "UR")
-    AddButton("Left", 514, 170, 64, 44, "LEFT")
-    AddButton("Right", 658, 170, 64, 44, "RIGHT")
-    AddButton("DownLeft", 514, 220, 64, 44, "DL")
-    AddButton("Down", 586, 220, 64, 44, "DOWN")
-    AddButton("DownRight", 658, 220, 64, 44, "DR")
-    AddButton("Fire", 514, 278, 105, 46, "FIRE")
+    AddButton("UpLeft", 514, 90, 64, 44, "UL")
+    AddButton("Up", 586, 90, 64, 44, "UP")
+    AddButton("UpRight", 658, 90, 64, 44, "UR")
+    AddButton("Left", 514, 140, 64, 44, "LEFT")
+    AddButton("Right", 658, 140, 64, 44, "RIGHT")
+    AddButton("DownLeft", 514, 190, 64, 44, "DL")
+    AddButton("Down", 586, 190, 64, 44, "DOWN")
+    AddButton("DownRight", 658, 190, 64, 44, "DR")
+    AddButton("Fire", 514, 248, 105, 46, "FIRE")
 
     layout["AutoFire"] = {
       PrettyName = "Game~Auto Fire",
       Style = "Button",
       ButtonStyle = "Toggle",
       ButtonVisualStyle = "Flat",
-      Position = { 631, 278 },
+      Position = { 631, 248 },
       Size = { 105, 46 },
       Color = { 255, 92, 157 },
       Legend = "AUTO FIRE"
@@ -339,7 +295,7 @@ function GetControlLayout(props)
     layout["Status"] = {
       PrettyName = "Game~Status",
       Style = "Text",
-      Position = { 514, 342 },
+      Position = { 514, 312 },
       Size = { 222, 50 },
       IsReadOnly = true,
       FontSize = 9,
@@ -347,40 +303,6 @@ function GetControlLayout(props)
       VTextAlign = "Center"
     }
 
-    local function AddLabel(text, y)
-      table.insert(graphics, {
-        Type = "Text",
-        Text = text,
-        Position = { 512, y },
-        Size = { 110, 20 },
-        FontSize = 9,
-        HTextAlign = "Right"
-      })
-    end
-
-    local function AddReadout(name, y)
-      layout[name] = {
-        PrettyName = "Game~" .. name,
-        Style = "Text",
-        Position = { 630, y },
-        Size = { 106, 22 },
-        IsReadOnly = true,
-        FontSize = 9,
-        HTextAlign = "Right"
-      }
-    end
-
-    AddLabel("Measured", 424)
-    AddLabel("SVG bytes", 454)
-    AddLabel("Base64 bytes", 484)
-    AddLabel("Enemies", 514)
-    AddLabel("Player bullets", 544)
-
-    AddReadout("MeasuredHz", 422)
-    AddReadout("SvgBytes", 452)
-    AddReadout("SvgBase64Bytes", 482)
-    AddReadout("ActiveEnemies", 512)
-    AddReadout("ActivePlayerBullets", 542)
   end
 
   return layout, graphics
@@ -404,8 +326,8 @@ if Controls then
     CardinalChordGraceTicks = 4,
     PlayerStartY = 414,
 
-    PlayerBulletWidth = 10,
-    PlayerBulletHeight = 18,
+    PlayerBulletWidth = 8,
+    PlayerBulletHeight = 16,
     PlayerBulletSpeed = 10,
     FireIntervalTicks = 5,
 
@@ -415,8 +337,8 @@ if Controls then
     EnemyFireSafetyDistance = 72,
     EnemyFireRetryTicks = 5,
 
-    EnemyBulletWidth = 10,
-    EnemyBulletHeight = 18,
+    EnemyBulletWidth = 8,
+    EnemyBulletHeight = 16,
 
     ExplosionWidth = 44,
     ExplosionHeight = 44,
@@ -831,8 +753,8 @@ if Controls then
     { Id = "enemy_easy", Source = "assets/enemy/enemy_easy.png", Width = 34, Height = 34 },
     { Id = "enemy_medium", Source = "assets/enemy/enemy_medium.png", Width = 34, Height = 34 },
     { Id = "enemy_hard", Source = "assets/enemy/enemy_hard.png", Width = 34, Height = 34 },
-    { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 10, Height = 18 },
-    { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 10, Height = 18 },
+    { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 8, Height = 16 },
+    { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 8, Height = 16 },
     { Id = "explosion_01", Source = "assets/explosion/explosion_01.png", Width = 44, Height = 44 },
     { Id = "explosion_02", Source = "assets/explosion/explosion_02.png", Width = 44, Height = 44 },
     { Id = "explosion_03", Source = "assets/explosion/explosion_03.png", Width = 44, Height = 44 },
@@ -861,20 +783,20 @@ if Controls then
 
   local PLAYER_BULLET_VISIBLE_DEFINITION =
     "<g id=\"player_bullet_visible\">" ..
-    "<rect x=\"0\" y=\"0\" width=\"10\" height=\"18\" rx=\"4\" fill=\"#071827\"/>" ..
-    "<rect x=\"1\" y=\"1\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#23d9ff\"/>" ..
-    "<rect x=\"3\" y=\"2\" width=\"4\" height=\"14\" rx=\"2\" fill=\"#8ff8ff\"/>" ..
-    "<rect x=\"4\" y=\"3\" width=\"2\" height=\"10\" fill=\"#ffffff\"/>" ..
+    "<rect x=\"0\" y=\"0\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#071827\"/>" ..
+    "<rect x=\"1\" y=\"1\" width=\"6\" height=\"14\" rx=\"3\" fill=\"#23d9ff\"/>" ..
+    "<rect x=\"2\" y=\"2\" width=\"4\" height=\"12\" rx=\"2\" fill=\"#8ff8ff\"/>" ..
+    "<rect x=\"3\" y=\"3\" width=\"2\" height=\"9\" fill=\"#ffffff\"/>" ..
     "</g>"
 
   -- Hostile shots deliberately use SVG geometry rather than the small source
   -- PNG so their silhouette and hot core remain readable on every stage.
   local ENEMY_BULLET_VISIBLE_DEFINITION =
     "<g id=\"enemy_bullet_visible\">" ..
-    "<rect x=\"0\" y=\"0\" width=\"10\" height=\"18\" rx=\"4\" fill=\"#160811\"/>" ..
-    "<rect x=\"1\" y=\"1\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#ff315f\"/>" ..
-    "<rect x=\"3\" y=\"2\" width=\"4\" height=\"14\" rx=\"2\" fill=\"#ffad2f\"/>" ..
-    "<rect x=\"4\" y=\"3\" width=\"2\" height=\"10\" fill=\"#ffffff\"/>" ..
+    "<rect x=\"0\" y=\"0\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#160811\"/>" ..
+    "<rect x=\"1\" y=\"1\" width=\"6\" height=\"14\" rx=\"3\" fill=\"#ff315f\"/>" ..
+    "<rect x=\"2\" y=\"2\" width=\"4\" height=\"12\" rx=\"2\" fill=\"#ffad2f\"/>" ..
+    "<rect x=\"3\" y=\"3\" width=\"2\" height=\"9\" fill=\"#ffffff\"/>" ..
     "</g>"
 
   local FALLBACK_EXPLOSION_DEFINITION =
@@ -2342,11 +2264,6 @@ if Controls then
   local rapidjson = require("rapidjson")
 
   local gameState = CreateGameState()
-  local tickCount = 0
-  local measurementTicks = 0
-  local measurementStartedAt = 0
-  local lastRawBytes = 0
-  local lastEncodedBytes = 0
   local recentHorizontalIntent = 0
   local recentHorizontalTicks = 0
   local recentVerticalIntent = 0
@@ -2383,33 +2300,18 @@ if Controls then
 
   local function RenderGameFrame()
     local svg = BuildGameSvg(gameState)
-    lastRawBytes = #svg
+    local rawBytes = #svg
 
-    if lastRawBytes > GAME_CONFIG.MaxRawSvgBytes then
+    if rawBytes > GAME_CONFIG.MaxRawSvgBytes then
       error(
-        "SVG " .. tostring(lastRawBytes) .. " B > " ..
+        "SVG " .. tostring(rawBytes) .. " B > " ..
         tostring(GAME_CONFIG.MaxRawSvgBytes) .. " B",
         0
       )
     end
 
-    local encodedSvg = Crypto.Base64Encode(svg)
-    lastEncodedBytes = #encodedSvg
-    GameLegend.IconData = encodedSvg
+    GameLegend.IconData = Crypto.Base64Encode(svg)
     Controls.Viewport.Legend = rapidjson.encode(GameLegend)
-  end
-
-  local function UpdateSceneTelemetry()
-    Controls.SvgBytes.String = tostring(lastRawBytes)
-    Controls.SvgBase64Bytes.String = tostring(lastEncodedBytes)
-    Controls.ActiveEnemies.String = tostring(CountActiveEnemies(gameState))
-    Controls.ActivePlayerBullets.String = tostring(CountActivePlayerBullets(gameState))
-  end
-
-  local function ResetMeasurement()
-    measurementTicks = 0
-    measurementStartedAt = Timer.Now()
-    Controls.MeasuredHz.String = "MEASURING"
   end
 
   local function ResetCardinalChordAssist()
@@ -2611,11 +2513,8 @@ if Controls then
     ResetParallax(gameState, 1)
     gameState.running = true
     gameState.paused = false
-    tickCount = 0
-    ResetMeasurement()
     AssignStageBackground(1)
     RenderGameFrame()
-    UpdateSceneTelemetry()
     Controls.Status.String = "RUNNING"
     GameTimer:Start(GAME_CONFIG.UpdateInterval)
   end
@@ -2638,8 +2537,6 @@ if Controls then
     GameTimer:Stop()
     gameState.paused = true
     RenderGameFrame()
-    UpdateSceneTelemetry()
-    Controls.MeasuredHz.String = "PAUSED"
     Controls.Status.String = "PAUSED"
   end
 
@@ -2651,9 +2548,7 @@ if Controls then
 
     ResetCardinalChordAssist()
     gameState.paused = false
-    ResetMeasurement()
     RenderGameFrame()
-    UpdateSceneTelemetry()
     Controls.Status.String = "RUNNING"
     GameTimer:Start(GAME_CONFIG.UpdateInterval)
   end
@@ -2661,30 +2556,17 @@ if Controls then
   GameTimer.EventHandler = function()
     UpdateGameState()
     RenderGameFrame()
-
-    tickCount = tickCount + 1
-    measurementTicks = measurementTicks + 1
-
-    local now = Timer.Now()
-    local elapsed = now - measurementStartedAt
-    if elapsed >= 1 then
-      Controls.MeasuredHz.String = string.format("%.1f Hz", measurementTicks / elapsed)
-      UpdateSceneTelemetry()
-      measurementTicks = 0
-      measurementStartedAt = now
-    end
   end
 
   Controls.Run.EventHandler = function(control)
     if control.Boolean then
       StartGame()
-    else
-      StopGame()
+      control.Boolean = false
     end
   end
 
   Controls.Pause.EventHandler = function(control)
-    if not Controls.Run.Boolean or gameState.gameOver or gameState.gameClear then
+    if not gameState.running or gameState.gameOver or gameState.gameClear then
       control.Boolean = false
       return
     end
@@ -2704,10 +2586,8 @@ if Controls then
   GameTimer:Stop()
   Controls.Run.Boolean = false
   Controls.Pause.Boolean = false
-  Controls.MeasuredHz.String = "0.0 Hz"
   AssignStageBackground(1)
   RenderGameFrame()
-  UpdateSceneTelemetry()
   Controls.Status.String = "READY"
 
   local missingAssets = MissingAssetList()

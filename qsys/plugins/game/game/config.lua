@@ -15,8 +15,8 @@ local GAME_CONFIG = {
   CardinalChordGraceTicks = 4,
   PlayerStartY = 414,
 
-  PlayerBulletWidth = 10,
-  PlayerBulletHeight = 18,
+  PlayerBulletWidth = 8,
+  PlayerBulletHeight = 16,
   PlayerBulletSpeed = 10,
   FireIntervalTicks = 5,
 
@@ -26,8 +26,8 @@ local GAME_CONFIG = {
   EnemyFireSafetyDistance = 72,
   EnemyFireRetryTicks = 5,
 
-  EnemyBulletWidth = 10,
-  EnemyBulletHeight = 18,
+  EnemyBulletWidth = 8,
+  EnemyBulletHeight = 16,
 
   ExplosionWidth = 44,
   ExplosionHeight = 44,

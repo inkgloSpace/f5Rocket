@@ -1,11 +1,6 @@
 local rapidjson = require("rapidjson")
 
 local gameState = CreateGameState()
-local tickCount = 0
-local measurementTicks = 0
-local measurementStartedAt = 0
-local lastRawBytes = 0
-local lastEncodedBytes = 0
 local recentHorizontalIntent = 0
 local recentHorizontalTicks = 0
 local recentVerticalIntent = 0
@@ -42,33 +37,18 @@ end
 
 local function RenderGameFrame()
   local svg = BuildGameSvg(gameState)
-  lastRawBytes = #svg
+  local rawBytes = #svg
 
-  if lastRawBytes > GAME_CONFIG.MaxRawSvgBytes then
+  if rawBytes > GAME_CONFIG.MaxRawSvgBytes then
     error(
-      "SVG " .. tostring(lastRawBytes) .. " B > " ..
+      "SVG " .. tostring(rawBytes) .. " B > " ..
       tostring(GAME_CONFIG.MaxRawSvgBytes) .. " B",
       0
     )
   end
 
-  local encodedSvg = Crypto.Base64Encode(svg)
-  lastEncodedBytes = #encodedSvg
-  GameLegend.IconData = encodedSvg
+  GameLegend.IconData = Crypto.Base64Encode(svg)
   Controls.Viewport.Legend = rapidjson.encode(GameLegend)
-end
-
-local function UpdateSceneTelemetry()
-  Controls.SvgBytes.String = tostring(lastRawBytes)
-  Controls.SvgBase64Bytes.String = tostring(lastEncodedBytes)
-  Controls.ActiveEnemies.String = tostring(CountActiveEnemies(gameState))
-  Controls.ActivePlayerBullets.String = tostring(CountActivePlayerBullets(gameState))
-end
-
-local function ResetMeasurement()
-  measurementTicks = 0
-  measurementStartedAt = Timer.Now()
-  Controls.MeasuredHz.String = "MEASURING"
 end
 
 local function ResetCardinalChordAssist()
@@ -270,11 +250,8 @@ local function StartGame()
   ResetParallax(gameState, 1)
   gameState.running = true
   gameState.paused = false
-  tickCount = 0
-  ResetMeasurement()
   AssignStageBackground(1)
   RenderGameFrame()
-  UpdateSceneTelemetry()
   Controls.Status.String = "RUNNING"
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
 end
@@ -297,8 +274,6 @@ local function PauseGame()
   GameTimer:Stop()
   gameState.paused = true
   RenderGameFrame()
-  UpdateSceneTelemetry()
-  Controls.MeasuredHz.String = "PAUSED"
   Controls.Status.String = "PAUSED"
 end
 
@@ -310,9 +285,7 @@ local function ResumeGame()
 
   ResetCardinalChordAssist()
   gameState.paused = false
-  ResetMeasurement()
   RenderGameFrame()
-  UpdateSceneTelemetry()
   Controls.Status.String = "RUNNING"
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
 end
@@ -320,30 +293,17 @@ end
 GameTimer.EventHandler = function()
   UpdateGameState()
   RenderGameFrame()
-
-  tickCount = tickCount + 1
-  measurementTicks = measurementTicks + 1
-
-  local now = Timer.Now()
-  local elapsed = now - measurementStartedAt
-  if elapsed >= 1 then
-    Controls.MeasuredHz.String = string.format("%.1f Hz", measurementTicks / elapsed)
-    UpdateSceneTelemetry()
-    measurementTicks = 0
-    measurementStartedAt = now
-  end
 end
 
 Controls.Run.EventHandler = function(control)
   if control.Boolean then
     StartGame()
-  else
-    StopGame()
+    control.Boolean = false
   end
 end
 
 Controls.Pause.EventHandler = function(control)
-  if not Controls.Run.Boolean or gameState.gameOver or gameState.gameClear then
+  if not gameState.running or gameState.gameOver or gameState.gameClear then
     control.Boolean = false
     return
   end
@@ -363,10 +323,8 @@ ResetCardinalChordAssist()
 GameTimer:Stop()
 Controls.Run.Boolean = false
 Controls.Pause.Boolean = false
-Controls.MeasuredHz.String = "0.0 Hz"
 AssignStageBackground(1)
 RenderGameFrame()
-UpdateSceneTelemetry()
 Controls.Status.String = "READY"
 
 local missingAssets = MissingAssetList()

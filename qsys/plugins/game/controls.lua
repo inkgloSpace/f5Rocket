@@ -17,7 +17,7 @@ table.insert(controls, {
 table.insert(controls, {
   Name = "Run",
   ControlType = "Button",
-  ButtonType = "Toggle",
+  ButtonType = "Momentary",
   DefaultValue = false,
   Count = 1,
   UserPin = true,
@@ -121,41 +121,6 @@ table.insert(controls, {
   ControlType = "Button",
   ButtonType = "Toggle",
   DefaultValue = false,
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "MeasuredHz",
-  ControlType = "Text",
-  DefaultValue = "0.0 Hz",
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "SvgBytes",
-  ControlType = "Text",
-  DefaultValue = "0",
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "SvgBase64Bytes",
-  ControlType = "Text",
-  DefaultValue = "0",
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "ActiveEnemies",
-  ControlType = "Text",
-  DefaultValue = "0",
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "ActivePlayerBullets",
-  ControlType = "Text",
-  DefaultValue = "0",
   Count = 1
 })
 

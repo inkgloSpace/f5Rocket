@@ -90,20 +90,20 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.5.1`
+- Version: `0.5.2`
 - Page: `Game`
 - Logical viewport: 320×480; Q-SYS display size: 480×720
 - Fixed update/render target: 30 Hz
 
-The current slice keeps the proven Toggle Run lifecycle and implements a three-stage campaign: Easy near orbit, Medium AV-tech asteroid space, and the Hard Q-Core arena. Each wave has a stage-local score threshold, a deterministic boss, a 45-tick clear transition, and a static stage background. A bounded three-layer SVG parallax overlay supplies motion without re-encoding the full-screen PNG. The campaign ends with MISSION COMPLETE at a minimum cumulative score of 52,500. One-hit death and Run OFF/ON restart semantics remain unchanged.
+The current slice keeps the proven single-timer lifecycle and implements a three-stage campaign: Easy near orbit, Medium AV-tech asteroid space, and the Hard Q-Core arena. Each wave has a stage-local score threshold, a deterministic boss, a 45-tick clear transition, and a static stage background. A bounded three-layer SVG parallax overlay supplies motion without re-encoding the full-screen PNG. The campaign ends with MISSION COMPLETE at a minimum cumulative score of 52,500.
 
-Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, `Fire`, `UpLeft`, `UpRight`, `DownLeft`, `DownRight`, `AutoFire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run`, `Pause`, and `AutoFire` are Toggles; all direction and manual-fire controls are Momentary.
+Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, `Fire`, `UpLeft`, `UpRight`, `DownLeft`, `DownRight`, `AutoFire`, and `Status`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run` is a Momentary start/restart pulse; `Pause` and `AutoFire` are Toggles; all direction and manual-fire controls are Momentary.
 
 The four diagonal controls and AutoFire form a smartphone-friendly UCI pad without replacing the original simultaneous engine inputs. Each tick OR-combines the mobile diagonals with `Up`, `Down`, `Left`, and `Right`, and combines `Fire` with `AutoFire`. Contradictory axes still cancel inside the existing player movement code, diagonal speed remains normalized, and the existing fire cooldown remains authoritative.
 
 Cardinal Chord Assist retains a recently released orthogonal cardinal intent for a four-tick detection window. Once a mobile slide such as Right→Up is recognized, the synthetic Right remains only while Up is held; release, explicit diagonals, opposing real input, Pause resume, Stop, and new-game Start clear stale state. True simultaneous inputs still resolve immediately without the assist.
 
-`Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, and `Fire` are also available as Q-SYS input control pins through **Properties → Control Pins**. These pins use the same Control objects as the panel buttons: an external HIGH holds a Momentary movement/fire input, while the Run and Pause Boolean values follow their Toggle semantics. Telemetry and viewport controls are not exposed as pins.
+`Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, and `Fire` are also available as Q-SYS input control pins through **Properties → Control Pins**. These pins use the same Control objects as the panel buttons. Run accepts a HIGH pulse, starts or restarts Stage 1, and self-resets LOW; Pause remains a Toggle, while movement and Fire use held Momentary Boolean values. Viewport and Status are not exposed as pins.
 
 Campaign tuning is centralized and deterministic:
 
@@ -117,10 +117,9 @@ The Easy boss uses single aimed shots. The Medium boss uses a three-shot fan wit
 
 The production lifecycle now directly follows the proven probes:
 
-- Enabling `Run` stops the timer, resets game state and enemies, renders one initial frame, reports `RUNNING`, and starts the single timer at 30 Hz.
-- Disabling `Run` stops the timer, sets `gameState.running` false, and reports `STOPPED`.
-- Enabling `Pause` while Run is active stops that same timer without resetting state, renders one paused frame, and reports `PAUSED`. Disabling Pause resets only the measurement window and resumes the same state. Stopping or starting a game clears Pause.
-- Each timer tick reads input, updates the existing game state, renders and assigns one transparent gameplay frame, then updates visible telemetry only when the approximately one-second measurement window closes.
+- Pressing `Run` stops the timer, resets the campaign to Stage 1, renders one initial frame, reports `RUNNING`, starts the same timer at 30 Hz, and self-resets the Momentary control LOW. Run release does nothing; another press cleanly restarts an active game.
+- Enabling `Pause` while gameplay is active stops that same timer without resetting state and renders one paused frame. Disabling Pause resumes the same state. Starting a game clears Pause.
+- Each timer tick reads input, updates the existing game state, renders, Base64-encodes, and assigns one transparent gameplay frame. Production telemetry controls and measurement work are intentionally absent.
 - The background Legend is encoded and assigned only at initialization, new-game reset, and stage transition. It is never touched by the timer hot path.
 - FAR, MID, and NEAR parallax objects are preallocated, update inside the existing timer, and render as lightweight `<use>` instances before all gameplay objects. Boss, clear, death, and completion phases reduce their speed rather than stopping them.
 - No production diagnostic mode, whole-tick `pcall`, or additional timer exists. Runtime diagnostics belong to the separate runtime probe.
@@ -145,7 +144,7 @@ Generation and 30 Hz embedding are separate concerns. Generated data exposes dyn
 
 Each enemy and boss sprite has one reusable downward-facing wrapper definition with a centralized 180-degree transform. Hostile instances select those wrappers and never repeat rotation markup.
 
-Player and hostile shots now share a 10×18 logical envelope but use separate reusable SVG definitions. Player fire uses a navy silhouette with cyan and white energy layers; enemy and boss fire uses a dark silhouette with magenta, orange, and white layers. The source bullet PNGs remain in the generated manifest for compatibility, while active shots render through `<use>` instances.
+Player and hostile shots share an 8×16 logical envelope but use separate reusable SVG definitions. Player fire uses a navy silhouette with cyan and white energy layers; enemy and boss fire uses a dark silhouette with magenta, orange, and white layers. The source bullet PNGs remain in the generated manifest for compatibility, while active shots render through `<use>` instances.
 
 The Medium enemy keeps its original 34×34 silhouette and alpha with an amber/orange/pale-yellow palette over a deep navy outline. The Hard enemy retains the same geometry and alpha with an electric-lime/pale-green palette over an almost-black outline. Easy enemy artwork is unchanged.
 
@@ -187,7 +186,7 @@ With hybrid parallax active, the current pack produces representative dynamic fr
 - `renderer/assets.lua`: shared artwork metadata, cached definitions, and asset selection
 - `renderer/parallax_svg.lua`: stage-specific reusable geometry and ordered parallax `<use>` serialization
 - `renderer/svg.lua`: static background serialization plus transparent gameplay/HUD frame serialization
-- `runtime.lua`: proven Toggle lifecycle, one Timer callback, stage orchestration, two centralized Legends, and one-second telemetry
+- `runtime.lua`: Momentary start/restart lifecycle, one Timer callback, stage orchestration, and two centralized Legends
 
 ## Installation and validation
 
