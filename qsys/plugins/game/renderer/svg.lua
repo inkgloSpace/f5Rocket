@@ -1,88 +1,56 @@
-local STARFIELD = {
-  { 12, 18, 1 }, { 48, 52, 2 }, { 86, 31, 1 }, { 130, 74, 1 },
-  { 176, 22, 2 }, { 224, 64, 1 }, { 282, 36, 1 }, { 308, 92, 2 },
-  { 28, 126, 1 }, { 70, 158, 1 }, { 112, 112, 2 }, { 154, 174, 1 },
-  { 202, 138, 1 }, { 248, 186, 2 }, { 296, 146, 1 }, { 18, 226, 2 },
-  { 58, 268, 1 }, { 104, 214, 1 }, { 146, 286, 2 }, { 190, 242, 1 },
-  { 236, 304, 1 }, { 278, 258, 2 }, { 314, 326, 1 }, { 34, 362, 1 },
-  { 82, 414, 2 }, { 126, 348, 1 }, { 170, 438, 1 }, { 216, 382, 2 },
-  { 260, 456, 1 }, { 302, 402, 1 }, { 54, 472, 1 }, { 244, 18, 1 }
-}
+local SVG_ROOT_OPEN =
+  "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">"
+
+-- Asset and fallback definitions are assembled once when the plugin runtime
+-- initializes. Per-frame serialization only emits positions, state, and HUD.
+local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. STATIC_RENDER_DEFINITIONS ..
+  "</defs><rect width=\"320\" height=\"480\" fill=\"#07101f\"/>"
+
+local TIMER_ONLY_SVG = SVG_ROOT_OPEN ..
+  "<rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
+  "<text x=\"160\" y=\"224\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"16\" text-anchor=\"middle\">TIMER ONLY</text>" ..
+  "<text x=\"160\" y=\"248\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">VIEWPORT HELD STATIC</text></svg>"
+
+local MINIMAL_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. FALLBACK_PLAYER_DEFINITION ..
+  "</defs><rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
+  "<text x=\"160\" y=\"24\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">MINIMAL RENDER</text>" ..
+  "<use href=\"#fallback_player\" x=\""
+local MINIMAL_SVG_SUFFIX = "\" y=\"220\"/></svg>"
 
 local function AppendBackground(parts, state)
+  local definitionId = "fallback_starfield"
   if AssetAvailable("background_tile") then
-    local offset = state.backgroundOffset
-    AppendAssetUse(parts, "background_tile", 0, offset - GAME_CONFIG.LogicalHeight)
-    AppendAssetUse(parts, "background_tile", 0, offset)
-    return
+    definitionId = "background_tile"
   end
 
-  for index = 1, #STARFIELD do
-    local star = STARFIELD[index]
-    local y = (star[2] + state.backgroundOffset) % GAME_CONFIG.LogicalHeight
-    local color = "#7088a8"
-    if star[3] == 2 then
-      color = "#d7f7ff"
-    end
-    parts[#parts + 1] = "<rect x=\"" .. tostring(star[1]) .. "\" y=\"" ..
-      tostring(y) .. "\" width=\"" .. tostring(star[3]) .. "\" height=\"" ..
-      tostring(star[3]) .. "\" fill=\"" .. color .. "\"/>"
-  end
+  local offset = state.backgroundOffset
+  AppendTranslatedUse(parts, definitionId, 0, offset - GAME_CONFIG.LogicalHeight)
+  AppendTranslatedUse(parts, definitionId, 0, offset)
 end
 
 local function AppendEnemy(parts, enemy)
-  if AppendAssetUse(parts, "enemy_01", enemy.x, enemy.y) then
-    return
-  end
-
-  parts[#parts + 1] = "<g transform=\"translate(" .. tostring(enemy.x) .. " " ..
-    tostring(enemy.y) .. ")\"><rect width=\"28\" height=\"28\" fill=\"#ff5c68\"/>" ..
-    "<path d=\"M4 8H24L20 24H8Z\" fill=\"#791f3d\"/>" ..
-    "<text x=\"14\" y=\"19\" fill=\"#ffffff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">E</text></g>"
+  AppendSpriteUse(parts, "enemy_01", "fallback_enemy", enemy.x, enemy.y)
 end
 
 local function AppendPlayerBullet(parts, bullet)
-  if not AppendAssetUse(parts, "bullet_player", bullet.x, bullet.y) then
-    parts[#parts + 1] = "<rect x=\"" .. tostring(bullet.x) .. "\" y=\"" ..
-      tostring(bullet.y) .. "\" width=\"6\" height=\"12\" fill=\"#ffe66d\"/>"
-  end
+  AppendSpriteUse(parts, "bullet_player", "fallback_player_bullet", bullet.x, bullet.y)
 end
 
 local function AppendEnemyBullet(parts, bullet)
-  if not AppendAssetUse(parts, "bullet_enemy", bullet.x, bullet.y) then
-    parts[#parts + 1] = "<rect x=\"" .. tostring(bullet.x) .. "\" y=\"" ..
-      tostring(bullet.y) .. "\" width=\"6\" height=\"8\" fill=\"#ff9b45\"/>"
-  end
+  AppendSpriteUse(parts, "bullet_enemy", "fallback_enemy_bullet", bullet.x, bullet.y)
 end
 
 local function AppendPlayer(parts, player)
-  local assetId = ResolvePlayerAsset(player.direction)
-  if assetId ~= nil and AppendAssetUse(parts, assetId, player.x, player.y) then
-    return
-  end
-
-  parts[#parts + 1] = "<g transform=\"translate(" .. tostring(player.x) .. " " ..
-    tostring(player.y) .. ")\"><polygon points=\"16,0 31,36 20,31 16,40 12,31 1,36\" fill=\"#46e6e1\"/>" ..
-    "<rect x=\"13\" y=\"15\" width=\"6\" height=\"16\" fill=\"#ffffff\"/>" ..
-    "<text x=\"16\" y=\"28\" fill=\"#07101f\" font-family=\"monospace\" font-size=\"8\" text-anchor=\"middle\">P</text></g>"
+  AppendDefinitionUse(parts, ResolvePlayerDefinition(player.direction), player.x, player.y)
 end
 
 local function AppendExplosion(parts, explosion)
   local assetId = "explosion_0" .. tostring(explosion.frame)
-  if not AppendAssetUse(parts, assetId, explosion.x, explosion.y) then
-    parts[#parts + 1] = "<g transform=\"translate(" .. tostring(explosion.x) .. " " ..
-      tostring(explosion.y) .. ")\"><path d=\"M16 0L20 11L32 16L20 21L16 32L12 21L0 16L12 11Z\" fill=\"#ff9b45\"/></g>"
-  end
+  AppendSpriteUse(parts, assetId, "fallback_explosion", explosion.x, explosion.y)
 end
 
 local function BuildGameSvg(state)
-  local parts = {
-    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">",
-    "<rect width=\"320\" height=\"480\" fill=\"#07101f\"/>",
-    "<defs>",
-    ASSET_DEFINITIONS,
-    "</defs>"
-  }
+  local parts = { GAME_SVG_PREFIX }
 
   AppendBackground(parts, state)
 
@@ -130,4 +98,12 @@ local function BuildGameSvg(state)
 
   parts[#parts + 1] = "</svg>"
   return table.concat(parts)
+end
+
+local function BuildTimerOnlySvg()
+  return TIMER_ONLY_SVG
+end
+
+local function BuildMinimalDiagnosticSvg(motionX)
+  return MINIMAL_SVG_PREFIX .. tostring(math.floor(motionX)) .. MINIMAL_SVG_SUFFIX
 end

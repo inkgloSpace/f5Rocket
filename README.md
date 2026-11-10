@@ -59,7 +59,7 @@ PNG file
 
 The SVG renderer only consumes state and the immutable asset catalog; it does not calculate gameplay or re-read/re-encode PNG files. Scene order is background, decoration, enemies, enemy bullets, player bullets, player, explosions, then HUD. Sprite positions are rounded to integer logical pixels, and the browser scales the fixed SVG with pixelated image rendering.
 
-The generated SVG is self-contained when PNGs are present. The production Q-SYS flow uses Lua, caches PNGs once in SVG `<defs>`, emits sprite instances with `<use href="#...">`, Base64-encodes the complete SVG once, rapidjson-encodes the Button legend payload, and assigns it through dynamic `IconData`.
+The generated SVG is self-contained when PNGs are present. The production Q-SYS flow uses Lua, caches PNGs and geometric missing-art fallbacks once in SVG `<defs>`, emits every sprite and scrolling starfield tile with `<use href="#...">`, Base64-encodes the complete SVG once, rapidjson-encodes the Button legend payload, and assigns it through dynamic `IconData`.
 
 Telemetry reports raw UTF-8 SVG bytes, the mathematically correct Base64 SVG length (`4 × ceil(raw bytes / 3)`), unique cached PNG data-URI bytes, active objects, and average browser SVG generation time. Raw SVG size already includes every embedded PNG data URI used by the scene; the separate asset metric counts each configured cached asset once.
 
@@ -114,7 +114,7 @@ window.__f5Rocket.benchmarkStressLevels(120)
 
 - The browser prototype still omits collision scoring; the Q-SYS production slice implements player-bullet/enemy AABB scoring independently.
 - The production slice has one recycling enemy type and no enemy weapons, lives, bosses, power-ups, sound, or progression.
-- The real PNG artwork pack is not present, so the Q-SYS game currently renders geometric fallbacks.
+- The real PNG artwork pack is not present, so the Q-SYS game currently renders reusable definition-based geometric fallbacks.
 - Q-SYS Designer validation does not establish physical Core CPU or final artwork payload limits.
 - Browser input is keyboard-only; Q-SYS input uses plugin controls.
 

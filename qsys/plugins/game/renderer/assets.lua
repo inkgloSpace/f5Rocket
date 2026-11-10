@@ -11,6 +11,62 @@ local ASSET_MANIFEST = {
   { Id = "background_tile", Source = "assets/background/background_tile.png", Width = 320, Height = 480 }
 }
 
+local STARFIELD = {
+  { 12, 18, 1 }, { 48, 52, 2 }, { 86, 31, 1 }, { 130, 74, 1 },
+  { 176, 22, 2 }, { 224, 64, 1 }, { 282, 36, 1 }, { 308, 92, 2 },
+  { 28, 126, 1 }, { 70, 158, 1 }, { 112, 112, 2 }, { 154, 174, 1 },
+  { 202, 138, 1 }, { 248, 186, 2 }, { 296, 146, 1 }, { 18, 226, 2 },
+  { 58, 268, 1 }, { 104, 214, 1 }, { 146, 286, 2 }, { 190, 242, 1 },
+  { 236, 304, 1 }, { 278, 258, 2 }, { 314, 326, 1 }, { 34, 362, 1 },
+  { 82, 414, 2 }, { 126, 348, 1 }, { 170, 438, 1 }, { 216, 382, 2 },
+  { 260, 456, 1 }, { 302, 402, 1 }, { 54, 472, 1 }, { 244, 18, 1 }
+}
+
+-- Fallback geometry is definition-based so the no-artwork path exercises the
+-- same Q-SYS <defs>/<use href> mechanism as production PNG sprites.
+local FALLBACK_PLAYER_DEFINITION =
+  "<g id=\"fallback_player\"><polygon points=\"16,0 31,36 20,31 16,40 12,31 1,36\" fill=\"#46e6e1\"/>" ..
+  "<rect x=\"13\" y=\"15\" width=\"6\" height=\"16\" fill=\"#ffffff\"/>" ..
+  "<text x=\"16\" y=\"28\" fill=\"#07101f\" font-family=\"monospace\" font-size=\"8\" text-anchor=\"middle\">P</text></g>"
+
+local FALLBACK_ENEMY_DEFINITION =
+  "<g id=\"fallback_enemy\"><rect width=\"28\" height=\"28\" fill=\"#ff5c68\"/>" ..
+  "<path d=\"M4 8H24L20 24H8Z\" fill=\"#791f3d\"/>" ..
+  "<text x=\"14\" y=\"19\" fill=\"#ffffff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">E</text></g>"
+
+local FALLBACK_PLAYER_BULLET_DEFINITION =
+  "<g id=\"fallback_player_bullet\"><rect width=\"6\" height=\"12\" fill=\"#ffe66d\"/></g>"
+
+local FALLBACK_ENEMY_BULLET_DEFINITION =
+  "<g id=\"fallback_enemy_bullet\"><rect width=\"6\" height=\"8\" fill=\"#ff9b45\"/></g>"
+
+local FALLBACK_EXPLOSION_DEFINITION =
+  "<g id=\"fallback_explosion\"><path d=\"M16 0L20 11L32 16L20 21L16 32L12 21L0 16L12 11Z\" fill=\"#ff9b45\"/></g>"
+
+local FALLBACK_STARFIELD_PARTS = { "<g id=\"fallback_starfield\">" }
+for index = 1, #STARFIELD do
+  local star = STARFIELD[index]
+  local color = "#7088a8"
+  if star[3] == 2 then
+    color = "#d7f7ff"
+  end
+  FALLBACK_STARFIELD_PARTS[#FALLBACK_STARFIELD_PARTS + 1] =
+    "<rect x=\"" .. tostring(star[1]) .. "\" y=\"" .. tostring(star[2]) ..
+    "\" width=\"" .. tostring(star[3]) .. "\" height=\"" ..
+    tostring(star[3]) .. "\" fill=\"" .. color .. "\"/>"
+end
+FALLBACK_STARFIELD_PARTS[#FALLBACK_STARFIELD_PARTS + 1] = "</g>"
+local FALLBACK_STARFIELD_DEFINITION = table.concat(FALLBACK_STARFIELD_PARTS)
+
+local FALLBACK_DEFINITIONS = table.concat({
+  FALLBACK_PLAYER_DEFINITION,
+  FALLBACK_ENEMY_DEFINITION,
+  FALLBACK_PLAYER_BULLET_DEFINITION,
+  FALLBACK_ENEMY_BULLET_DEFINITION,
+  FALLBACK_EXPLOSION_DEFINITION,
+  FALLBACK_STARFIELD_DEFINITION
+})
+
 local ASSETS = {}
 local ASSET_DEFINITION_PARTS = {}
 local MISSING_ASSET_PATHS = {}
@@ -42,23 +98,33 @@ for index = 1, #ASSET_MANIFEST do
 end
 
 local ASSET_DEFINITIONS = table.concat(ASSET_DEFINITION_PARTS)
+local STATIC_RENDER_DEFINITIONS = ASSET_DEFINITIONS .. FALLBACK_DEFINITIONS
 
 local function AssetAvailable(assetId)
   local asset = ASSETS[assetId]
   return asset ~= nil and asset.Available
 end
 
-local function AppendAssetUse(parts, assetId, x, y)
-  if not AssetAvailable(assetId) then
-    return false
-  end
-
-  parts[#parts + 1] = "<use href=\"#" .. assetId .. "\" x=\"" ..
+local function AppendDefinitionUse(parts, definitionId, x, y)
+  parts[#parts + 1] = "<use href=\"#" .. definitionId .. "\" x=\"" ..
     tostring(math.floor(x)) .. "\" y=\"" .. tostring(math.floor(y)) .. "\"/>"
-  return true
 end
 
-local function ResolvePlayerAsset(direction)
+local function AppendTranslatedUse(parts, definitionId, x, y)
+  parts[#parts + 1] = "<use href=\"#" .. definitionId ..
+    "\" transform=\"translate(" .. tostring(math.floor(x)) .. " " ..
+    tostring(math.floor(y)) .. ")\"/>"
+end
+
+local function AppendSpriteUse(parts, assetId, fallbackId, x, y)
+  if AssetAvailable(assetId) then
+    AppendDefinitionUse(parts, assetId, x, y)
+  else
+    AppendDefinitionUse(parts, fallbackId, x, y)
+  end
+end
+
+local function ResolvePlayerDefinition(direction)
   if direction == "left" and AssetAvailable("player_left") then
     return "player_left"
   end
@@ -68,7 +134,7 @@ local function ResolvePlayerAsset(direction)
   if AssetAvailable("player_idle") then
     return "player_idle"
   end
-  return nil
+  return "fallback_player"
 end
 
 local function AssetAvailabilitySummary()

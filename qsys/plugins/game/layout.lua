@@ -39,11 +39,12 @@ if currentPage == 1 then
     })
   end
 
-  AddLabel("Measured", 346)
-  AddLabel("SVG bytes", 374)
-  AddLabel("Base64 bytes", 402)
-  AddLabel("Enemies", 430)
-  AddLabel("Player bullets", 458)
+  AddLabel("Diagnostic", 280)
+  AddLabel("Measured", 362)
+  AddLabel("SVG bytes", 390)
+  AddLabel("Base64 bytes", 418)
+  AddLabel("Enemies", 446)
+  AddLabel("Player bullets", 474)
 
   layout["Viewport"] = {
     PrettyName = "Game~Viewport",
@@ -100,11 +101,18 @@ if currentPage == 1 then
   AddButton("Right", 492, 164, 56, 42, "RIGHT")
   AddButton("Fire", 356, 220, 192, 42, "FIRE")
 
+  layout["DiagnosticMode"] = {
+    PrettyName = "Game~DiagnosticMode",
+    Style = "ComboBox",
+    Position = { 458, 278 },
+    Size = { 96, 22 }
+  }
+
   layout["Status"] = {
     PrettyName = "Game~Status",
     Style = "Text",
-    Position = { 350, 278 },
-    Size = { 204, 48 },
+    Position = { 350, 310 },
+    Size = { 204, 36 },
     IsReadOnly = true,
     FontSize = 9,
     HTextAlign = "Center",
@@ -123,9 +131,9 @@ if currentPage == 1 then
     }
   end
 
-  AddReadout("MeasuredHz", 344)
-  AddReadout("SvgBytes", 372)
-  AddReadout("SvgBase64Bytes", 400)
-  AddReadout("ActiveEnemies", 428)
-  AddReadout("ActivePlayerBullets", 456)
+  AddReadout("MeasuredHz", 360)
+  AddReadout("SvgBytes", 388)
+  AddReadout("SvgBase64Bytes", 416)
+  AddReadout("ActiveEnemies", 444)
+  AddReadout("ActivePlayerBullets", 472)
 end

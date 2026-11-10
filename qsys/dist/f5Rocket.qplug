@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.1.0",
-  BuildVersion = "0.1.0.0",
+  Version = "0.1.1",
+  BuildVersion = "0.1.1.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -66,6 +66,13 @@ function GetControls(props)
     ControlType = "Button",
     ButtonType = "Toggle",
     DefaultValue = false,
+    Count = 1
+  })
+
+  table.insert(controls, {
+    Name = "DiagnosticMode",
+    ControlType = "Text",
+    DefaultValue = "FULL GAME",
     Count = 1
   })
 
@@ -200,11 +207,12 @@ function GetControlLayout(props)
       })
     end
 
-    AddLabel("Measured", 346)
-    AddLabel("SVG bytes", 374)
-    AddLabel("Base64 bytes", 402)
-    AddLabel("Enemies", 430)
-    AddLabel("Player bullets", 458)
+    AddLabel("Diagnostic", 280)
+    AddLabel("Measured", 362)
+    AddLabel("SVG bytes", 390)
+    AddLabel("Base64 bytes", 418)
+    AddLabel("Enemies", 446)
+    AddLabel("Player bullets", 474)
 
     layout["Viewport"] = {
       PrettyName = "Game~Viewport",
@@ -261,11 +269,18 @@ function GetControlLayout(props)
     AddButton("Right", 492, 164, 56, 42, "RIGHT")
     AddButton("Fire", 356, 220, 192, 42, "FIRE")
 
+    layout["DiagnosticMode"] = {
+      PrettyName = "Game~DiagnosticMode",
+      Style = "ComboBox",
+      Position = { 458, 278 },
+      Size = { 96, 22 }
+    }
+
     layout["Status"] = {
       PrettyName = "Game~Status",
       Style = "Text",
-      Position = { 350, 278 },
-      Size = { 204, 48 },
+      Position = { 350, 310 },
+      Size = { 204, 36 },
       IsReadOnly = true,
       FontSize = 9,
       HTextAlign = "Center",
@@ -284,11 +299,11 @@ function GetControlLayout(props)
       }
     end
 
-    AddReadout("MeasuredHz", 344)
-    AddReadout("SvgBytes", 372)
-    AddReadout("SvgBase64Bytes", 400)
-    AddReadout("ActiveEnemies", 428)
-    AddReadout("ActivePlayerBullets", 456)
+    AddReadout("MeasuredHz", 360)
+    AddReadout("SvgBytes", 388)
+    AddReadout("SvgBase64Bytes", 416)
+    AddReadout("ActiveEnemies", 444)
+    AddReadout("ActivePlayerBullets", 472)
   end
 
   return layout, graphics
@@ -454,6 +469,62 @@ if Controls then
     { Id = "background_tile", Source = "assets/background/background_tile.png", Width = 320, Height = 480 }
   }
 
+  local STARFIELD = {
+    { 12, 18, 1 }, { 48, 52, 2 }, { 86, 31, 1 }, { 130, 74, 1 },
+    { 176, 22, 2 }, { 224, 64, 1 }, { 282, 36, 1 }, { 308, 92, 2 },
+    { 28, 126, 1 }, { 70, 158, 1 }, { 112, 112, 2 }, { 154, 174, 1 },
+    { 202, 138, 1 }, { 248, 186, 2 }, { 296, 146, 1 }, { 18, 226, 2 },
+    { 58, 268, 1 }, { 104, 214, 1 }, { 146, 286, 2 }, { 190, 242, 1 },
+    { 236, 304, 1 }, { 278, 258, 2 }, { 314, 326, 1 }, { 34, 362, 1 },
+    { 82, 414, 2 }, { 126, 348, 1 }, { 170, 438, 1 }, { 216, 382, 2 },
+    { 260, 456, 1 }, { 302, 402, 1 }, { 54, 472, 1 }, { 244, 18, 1 }
+  }
+
+  -- Fallback geometry is definition-based so the no-artwork path exercises the
+  -- same Q-SYS <defs>/<use href> mechanism as production PNG sprites.
+  local FALLBACK_PLAYER_DEFINITION =
+    "<g id=\"fallback_player\"><polygon points=\"16,0 31,36 20,31 16,40 12,31 1,36\" fill=\"#46e6e1\"/>" ..
+    "<rect x=\"13\" y=\"15\" width=\"6\" height=\"16\" fill=\"#ffffff\"/>" ..
+    "<text x=\"16\" y=\"28\" fill=\"#07101f\" font-family=\"monospace\" font-size=\"8\" text-anchor=\"middle\">P</text></g>"
+
+  local FALLBACK_ENEMY_DEFINITION =
+    "<g id=\"fallback_enemy\"><rect width=\"28\" height=\"28\" fill=\"#ff5c68\"/>" ..
+    "<path d=\"M4 8H24L20 24H8Z\" fill=\"#791f3d\"/>" ..
+    "<text x=\"14\" y=\"19\" fill=\"#ffffff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">E</text></g>"
+
+  local FALLBACK_PLAYER_BULLET_DEFINITION =
+    "<g id=\"fallback_player_bullet\"><rect width=\"6\" height=\"12\" fill=\"#ffe66d\"/></g>"
+
+  local FALLBACK_ENEMY_BULLET_DEFINITION =
+    "<g id=\"fallback_enemy_bullet\"><rect width=\"6\" height=\"8\" fill=\"#ff9b45\"/></g>"
+
+  local FALLBACK_EXPLOSION_DEFINITION =
+    "<g id=\"fallback_explosion\"><path d=\"M16 0L20 11L32 16L20 21L16 32L12 21L0 16L12 11Z\" fill=\"#ff9b45\"/></g>"
+
+  local FALLBACK_STARFIELD_PARTS = { "<g id=\"fallback_starfield\">" }
+  for index = 1, #STARFIELD do
+    local star = STARFIELD[index]
+    local color = "#7088a8"
+    if star[3] == 2 then
+      color = "#d7f7ff"
+    end
+    FALLBACK_STARFIELD_PARTS[#FALLBACK_STARFIELD_PARTS + 1] =
+      "<rect x=\"" .. tostring(star[1]) .. "\" y=\"" .. tostring(star[2]) ..
+      "\" width=\"" .. tostring(star[3]) .. "\" height=\"" ..
+      tostring(star[3]) .. "\" fill=\"" .. color .. "\"/>"
+  end
+  FALLBACK_STARFIELD_PARTS[#FALLBACK_STARFIELD_PARTS + 1] = "</g>"
+  local FALLBACK_STARFIELD_DEFINITION = table.concat(FALLBACK_STARFIELD_PARTS)
+
+  local FALLBACK_DEFINITIONS = table.concat({
+    FALLBACK_PLAYER_DEFINITION,
+    FALLBACK_ENEMY_DEFINITION,
+    FALLBACK_PLAYER_BULLET_DEFINITION,
+    FALLBACK_ENEMY_BULLET_DEFINITION,
+    FALLBACK_EXPLOSION_DEFINITION,
+    FALLBACK_STARFIELD_DEFINITION
+  })
+
   local ASSETS = {}
   local ASSET_DEFINITION_PARTS = {}
   local MISSING_ASSET_PATHS = {}
@@ -485,23 +556,33 @@ if Controls then
   end
 
   local ASSET_DEFINITIONS = table.concat(ASSET_DEFINITION_PARTS)
+  local STATIC_RENDER_DEFINITIONS = ASSET_DEFINITIONS .. FALLBACK_DEFINITIONS
 
   local function AssetAvailable(assetId)
     local asset = ASSETS[assetId]
     return asset ~= nil and asset.Available
   end
 
-  local function AppendAssetUse(parts, assetId, x, y)
-    if not AssetAvailable(assetId) then
-      return false
-    end
-
-    parts[#parts + 1] = "<use href=\"#" .. assetId .. "\" x=\"" ..
+  local function AppendDefinitionUse(parts, definitionId, x, y)
+    parts[#parts + 1] = "<use href=\"#" .. definitionId .. "\" x=\"" ..
       tostring(math.floor(x)) .. "\" y=\"" .. tostring(math.floor(y)) .. "\"/>"
-    return true
   end
 
-  local function ResolvePlayerAsset(direction)
+  local function AppendTranslatedUse(parts, definitionId, x, y)
+    parts[#parts + 1] = "<use href=\"#" .. definitionId ..
+      "\" transform=\"translate(" .. tostring(math.floor(x)) .. " " ..
+      tostring(math.floor(y)) .. ")\"/>"
+  end
+
+  local function AppendSpriteUse(parts, assetId, fallbackId, x, y)
+    if AssetAvailable(assetId) then
+      AppendDefinitionUse(parts, assetId, x, y)
+    else
+      AppendDefinitionUse(parts, fallbackId, x, y)
+    end
+  end
+
+  local function ResolvePlayerDefinition(direction)
     if direction == "left" and AssetAvailable("player_left") then
       return "player_left"
     end
@@ -511,7 +592,7 @@ if Controls then
     if AssetAvailable("player_idle") then
       return "player_idle"
     end
-    return nil
+    return "fallback_player"
   end
 
   local function AssetAvailabilitySummary()
@@ -771,91 +852,59 @@ if Controls then
       end
     end
   end
-  local STARFIELD = {
-    { 12, 18, 1 }, { 48, 52, 2 }, { 86, 31, 1 }, { 130, 74, 1 },
-    { 176, 22, 2 }, { 224, 64, 1 }, { 282, 36, 1 }, { 308, 92, 2 },
-    { 28, 126, 1 }, { 70, 158, 1 }, { 112, 112, 2 }, { 154, 174, 1 },
-    { 202, 138, 1 }, { 248, 186, 2 }, { 296, 146, 1 }, { 18, 226, 2 },
-    { 58, 268, 1 }, { 104, 214, 1 }, { 146, 286, 2 }, { 190, 242, 1 },
-    { 236, 304, 1 }, { 278, 258, 2 }, { 314, 326, 1 }, { 34, 362, 1 },
-    { 82, 414, 2 }, { 126, 348, 1 }, { 170, 438, 1 }, { 216, 382, 2 },
-    { 260, 456, 1 }, { 302, 402, 1 }, { 54, 472, 1 }, { 244, 18, 1 }
-  }
+  local SVG_ROOT_OPEN =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">"
+
+  -- Asset and fallback definitions are assembled once when the plugin runtime
+  -- initializes. Per-frame serialization only emits positions, state, and HUD.
+  local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. STATIC_RENDER_DEFINITIONS ..
+    "</defs><rect width=\"320\" height=\"480\" fill=\"#07101f\"/>"
+
+  local TIMER_ONLY_SVG = SVG_ROOT_OPEN ..
+    "<rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
+    "<text x=\"160\" y=\"224\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"16\" text-anchor=\"middle\">TIMER ONLY</text>" ..
+    "<text x=\"160\" y=\"248\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">VIEWPORT HELD STATIC</text></svg>"
+
+  local MINIMAL_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. FALLBACK_PLAYER_DEFINITION ..
+    "</defs><rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
+    "<text x=\"160\" y=\"24\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">MINIMAL RENDER</text>" ..
+    "<use href=\"#fallback_player\" x=\""
+  local MINIMAL_SVG_SUFFIX = "\" y=\"220\"/></svg>"
 
   local function AppendBackground(parts, state)
+    local definitionId = "fallback_starfield"
     if AssetAvailable("background_tile") then
-      local offset = state.backgroundOffset
-      AppendAssetUse(parts, "background_tile", 0, offset - GAME_CONFIG.LogicalHeight)
-      AppendAssetUse(parts, "background_tile", 0, offset)
-      return
+      definitionId = "background_tile"
     end
 
-    for index = 1, #STARFIELD do
-      local star = STARFIELD[index]
-      local y = (star[2] + state.backgroundOffset) % GAME_CONFIG.LogicalHeight
-      local color = "#7088a8"
-      if star[3] == 2 then
-        color = "#d7f7ff"
-      end
-      parts[#parts + 1] = "<rect x=\"" .. tostring(star[1]) .. "\" y=\"" ..
-        tostring(y) .. "\" width=\"" .. tostring(star[3]) .. "\" height=\"" ..
-        tostring(star[3]) .. "\" fill=\"" .. color .. "\"/>"
-    end
+    local offset = state.backgroundOffset
+    AppendTranslatedUse(parts, definitionId, 0, offset - GAME_CONFIG.LogicalHeight)
+    AppendTranslatedUse(parts, definitionId, 0, offset)
   end
 
   local function AppendEnemy(parts, enemy)
-    if AppendAssetUse(parts, "enemy_01", enemy.x, enemy.y) then
-      return
-    end
-
-    parts[#parts + 1] = "<g transform=\"translate(" .. tostring(enemy.x) .. " " ..
-      tostring(enemy.y) .. ")\"><rect width=\"28\" height=\"28\" fill=\"#ff5c68\"/>" ..
-      "<path d=\"M4 8H24L20 24H8Z\" fill=\"#791f3d\"/>" ..
-      "<text x=\"14\" y=\"19\" fill=\"#ffffff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">E</text></g>"
+    AppendSpriteUse(parts, "enemy_01", "fallback_enemy", enemy.x, enemy.y)
   end
 
   local function AppendPlayerBullet(parts, bullet)
-    if not AppendAssetUse(parts, "bullet_player", bullet.x, bullet.y) then
-      parts[#parts + 1] = "<rect x=\"" .. tostring(bullet.x) .. "\" y=\"" ..
-        tostring(bullet.y) .. "\" width=\"6\" height=\"12\" fill=\"#ffe66d\"/>"
-    end
+    AppendSpriteUse(parts, "bullet_player", "fallback_player_bullet", bullet.x, bullet.y)
   end
 
   local function AppendEnemyBullet(parts, bullet)
-    if not AppendAssetUse(parts, "bullet_enemy", bullet.x, bullet.y) then
-      parts[#parts + 1] = "<rect x=\"" .. tostring(bullet.x) .. "\" y=\"" ..
-        tostring(bullet.y) .. "\" width=\"6\" height=\"8\" fill=\"#ff9b45\"/>"
-    end
+    AppendSpriteUse(parts, "bullet_enemy", "fallback_enemy_bullet", bullet.x, bullet.y)
   end
 
   local function AppendPlayer(parts, player)
-    local assetId = ResolvePlayerAsset(player.direction)
-    if assetId ~= nil and AppendAssetUse(parts, assetId, player.x, player.y) then
-      return
-    end
-
-    parts[#parts + 1] = "<g transform=\"translate(" .. tostring(player.x) .. " " ..
-      tostring(player.y) .. ")\"><polygon points=\"16,0 31,36 20,31 16,40 12,31 1,36\" fill=\"#46e6e1\"/>" ..
-      "<rect x=\"13\" y=\"15\" width=\"6\" height=\"16\" fill=\"#ffffff\"/>" ..
-      "<text x=\"16\" y=\"28\" fill=\"#07101f\" font-family=\"monospace\" font-size=\"8\" text-anchor=\"middle\">P</text></g>"
+    AppendDefinitionUse(parts, ResolvePlayerDefinition(player.direction), player.x, player.y)
   end
 
   local function AppendExplosion(parts, explosion)
     local assetId = "explosion_0" .. tostring(explosion.frame)
-    if not AppendAssetUse(parts, assetId, explosion.x, explosion.y) then
-      parts[#parts + 1] = "<g transform=\"translate(" .. tostring(explosion.x) .. " " ..
-        tostring(explosion.y) .. ")\"><path d=\"M16 0L20 11L32 16L20 21L16 32L12 21L0 16L12 11Z\" fill=\"#ff9b45\"/></g>"
-    end
+    AppendSpriteUse(parts, assetId, "fallback_explosion", explosion.x, explosion.y)
   end
 
   local function BuildGameSvg(state)
-    local parts = {
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">",
-      "<rect width=\"320\" height=\"480\" fill=\"#07101f\"/>",
-      "<defs>",
-      ASSET_DEFINITIONS,
-      "</defs>"
-    }
+    local parts = { GAME_SVG_PREFIX }
 
     AppendBackground(parts, state)
 
@@ -904,50 +953,119 @@ if Controls then
     parts[#parts + 1] = "</svg>"
     return table.concat(parts)
   end
+
+  local function BuildTimerOnlySvg()
+    return TIMER_ONLY_SVG
+  end
+
+  local function BuildMinimalDiagnosticSvg(motionX)
+    return MINIMAL_SVG_PREFIX .. tostring(math.floor(motionX)) .. MINIMAL_SVG_SUFFIX
+  end
   local rapidjson = require("rapidjson")
 
+  local DIAGNOSTIC_MODE_CHOICES = { "TIMER ONLY", "MINIMAL RENDER", "FULL GAME" }
+  local DIAGNOSTIC_MODE_VALUES = {
+    ["TIMER ONLY"] = true,
+    ["MINIMAL RENDER"] = true,
+    ["FULL GAME"] = true
+  }
+
   local gameState = CreateGameState()
+  local activeDiagnosticMode = "FULL GAME"
   local measurementTicks = 0
   local measurementStartedAt = 0
+  local timerTickCount = 0
+  local lastRawBytes = 0
+  local lastEncodedBytes = 0
+  local lastTickStage = "IDLE"
+  local minimalMotionX = 0
+  local minimalMotionDirection = 1
+
+  local MINIMAL_MOTION_MIN = 0
+  local MINIMAL_MOTION_MAX = GAME_CONFIG.LogicalWidth - GAME_CONFIG.PlayerWidth
+  local MINIMAL_MOTION_STEP = GAME_CONFIG.PlayerSpeed
 
   GameLegend = {
     DrawChrome = false,
     IconData = ""
   }
 
-  -- Keep the timer globally scoped so Q-SYS Lua garbage collection cannot remove it.
+  -- Keep the single timer globally scoped so Q-SYS Lua GC cannot remove it.
   GameTimer = Timer.New()
 
   local function UpdateStatus(text)
     Controls.Status.String = text
   end
 
-  local function RenderGameFrameUnsafe()
-    local svg = BuildGameSvg(gameState)
-    local encodedSvg = Crypto.Base64Encode(svg)
-
-    GameLegend.IconData = encodedSvg
-    Controls.Viewport.Legend = rapidjson.encode(GameLegend)
-
-    return #svg, #encodedSvg
+  local function SelectedDiagnosticMode()
+    local selected = Controls.DiagnosticMode.String
+    if DIAGNOSTIC_MODE_VALUES[selected] == nil then
+      selected = "FULL GAME"
+      Controls.DiagnosticMode.String = selected
+    end
+    return selected
   end
 
-  local function RenderGameFrame()
-    local success, rawBytes, encodedBytes = pcall(RenderGameFrameUnsafe)
-    if not success then
-      GameTimer:Stop()
-      gameState.running = false
-      Controls.Pause.Boolean = false
-      UpdateStatus("ERROR: " .. tostring(rawBytes))
-      print("[f5Rocket] Render error: " .. tostring(rawBytes))
-      return false
+  local function RunningStatus()
+    if activeDiagnosticMode == "FULL GAME" and gameState.paused then
+      return "PAUSED / FULL GAME"
     end
+    return "RUNNING / " .. activeDiagnosticMode
+  end
 
-    Controls.SvgBytes.String = tostring(rawBytes)
-    Controls.SvgBase64Bytes.String = tostring(encodedBytes)
-    Controls.ActiveEnemies.String = tostring(CountActiveEnemies(gameState))
-    Controls.ActivePlayerBullets.String = tostring(CountActivePlayerBullets(gameState))
-    return true
+  local function ResetMinimalMotion()
+    minimalMotionX = MINIMAL_MOTION_MIN
+    minimalMotionDirection = 1
+  end
+
+  local function UpdateMinimalMotion()
+    minimalMotionX = minimalMotionX + minimalMotionDirection * MINIMAL_MOTION_STEP
+
+    if minimalMotionX >= MINIMAL_MOTION_MAX then
+      minimalMotionX = MINIMAL_MOTION_MAX
+      minimalMotionDirection = -1
+    elseif minimalMotionX <= MINIMAL_MOTION_MIN then
+      minimalMotionX = MINIMAL_MOTION_MIN
+      minimalMotionDirection = 1
+    end
+  end
+
+  local function AssignSvgToViewportUnsafe(svg)
+    lastTickStage = "BASE64"
+    local encodedSvg = Crypto.Base64Encode(svg)
+    lastRawBytes = #svg
+    lastEncodedBytes = #encodedSvg
+
+    lastTickStage = "LEGEND"
+    GameLegend.IconData = encodedSvg
+    Controls.Viewport.Legend = rapidjson.encode(GameLegend)
+  end
+
+  local function RenderSelectedFrameUnsafe()
+    lastTickStage = "SVG"
+    local svg
+    if activeDiagnosticMode == "TIMER ONLY" then
+      svg = BuildTimerOnlySvg()
+    elseif activeDiagnosticMode == "MINIMAL RENDER" then
+      svg = BuildMinimalDiagnosticSvg(minimalMotionX)
+    else
+      svg = BuildGameSvg(gameState)
+    end
+    AssignSvgToViewportUnsafe(svg)
+  end
+
+  local function UpdateTelemetryControlsUnsafe()
+    lastTickStage = "TELEMETRY"
+    Controls.SvgBytes.String = tostring(lastRawBytes)
+    Controls.SvgBase64Bytes.String = tostring(lastEncodedBytes)
+
+    if activeDiagnosticMode == "FULL GAME" then
+      Controls.ActiveEnemies.String = tostring(CountActiveEnemies(gameState))
+      Controls.ActivePlayerBullets.String = tostring(CountActivePlayerBullets(gameState))
+    else
+      Controls.ActiveEnemies.String = "0"
+      Controls.ActivePlayerBullets.String = "0"
+    end
   end
 
   local function ResetMeasurement()
@@ -956,53 +1074,82 @@ if Controls then
     Controls.MeasuredHz.String = "MEASURING"
   end
 
-  local function UpdateMeasurement()
+  local function CompleteTickTelemetryUnsafe()
+    timerTickCount = timerTickCount + 1
     measurementTicks = measurementTicks + 1
+
     local now = Timer.Now()
     local elapsed = now - measurementStartedAt
     if elapsed >= 1 then
+      lastTickStage = "TELEMETRY"
       Controls.MeasuredHz.String = string.format("%.1f Hz", measurementTicks / elapsed)
+      UpdateTelemetryControlsUnsafe()
       measurementTicks = 0
       measurementStartedAt = now
     end
+
+    lastTickStage = "DONE"
   end
 
-  local function StartGame()
+  local function HandleRuntimeError(errorMessage)
     GameTimer:Stop()
-    ResetGameState(gameState)
-    ResetEnemies(gameState)
-    gameState.running = true
+    gameState.running = false
     gameState.paused = false
     Controls.Pause.Boolean = false
-    ResetMeasurement()
 
-    if RenderGameFrame() then
-      UpdateStatus("RUNNING")
-      GameTimer:Start(GAME_CONFIG.UpdateInterval)
-    end
+    local message = "ERROR @ " .. tostring(lastTickStage) .. ": " .. tostring(errorMessage)
+    UpdateStatus(message)
+    print("[f5Rocket] Tick error @ " .. tostring(lastTickStage) .. ": " .. tostring(errorMessage))
   end
 
-  local function UpdateGameState()
+  local function RenderImmediateProtected()
+    local success, errorMessage = pcall(function()
+      RenderSelectedFrameUnsafe()
+      UpdateTelemetryControlsUnsafe()
+      lastTickStage = "DONE"
+    end)
+
+    if not success then
+      HandleRuntimeError(errorMessage)
+      return false
+    end
+    return true
+  end
+
+  local function UpdateFullGameStateUnsafe()
+    lastTickStage = "INPUT"
+    local leftPressed = Controls.Left.Boolean
+    local rightPressed = Controls.Right.Boolean
+    local upPressed = Controls.Up.Boolean
+    local downPressed = Controls.Down.Boolean
+    local firePressed = Controls.Fire.Boolean
+
     if not gameState.running or gameState.paused then
       return
     end
 
+    lastTickStage = "PLAYER"
     UpdatePlayer(
       gameState,
-      Controls.Left.Boolean,
-      Controls.Right.Boolean,
-      Controls.Up.Boolean,
-      Controls.Down.Boolean
+      leftPressed,
+      rightPressed,
+      upPressed,
+      downPressed
     )
-
-    if Controls.Fire.Boolean then
+    if firePressed then
       FirePlayerBullet(gameState)
     end
 
+    lastTickStage = "BULLETS"
     UpdatePlayerBullets(gameState)
+
+    lastTickStage = "ENEMIES"
     UpdateEnemies(gameState)
+
+    lastTickStage = "COLLISION"
     CheckPlayerBulletEnemyCollisions(gameState)
 
+    lastTickStage = "BACKGROUND"
     gameState.backgroundOffset = (
       gameState.backgroundOffset + GAME_CONFIG.BackgroundScrollPerTick
     ) % GAME_CONFIG.LogicalHeight
@@ -1010,10 +1157,65 @@ if Controls then
     gameState.time = gameState.ticks * GAME_CONFIG.UpdateInterval
   end
 
+  local function GameTickUnsafe()
+    if activeDiagnosticMode == "TIMER ONLY" then
+      lastTickStage = "INPUT"
+      -- Deliberately no game update and no per-tick Viewport.Legend assignment.
+    elseif activeDiagnosticMode == "MINIMAL RENDER" then
+      lastTickStage = "PLAYER"
+      UpdateMinimalMotion()
+      RenderSelectedFrameUnsafe()
+    else
+      UpdateFullGameStateUnsafe()
+      RenderSelectedFrameUnsafe()
+    end
+
+    CompleteTickTelemetryUnsafe()
+  end
+
+  local function StartGame()
+    GameTimer:Stop()
+    ResetGameState(gameState)
+    ResetEnemies(gameState)
+    ResetMinimalMotion()
+    timerTickCount = 0
+    gameState.running = true
+    gameState.paused = false
+    Controls.Pause.Boolean = false
+    activeDiagnosticMode = SelectedDiagnosticMode()
+    ResetMeasurement()
+
+    if RenderImmediateProtected() then
+      UpdateStatus(RunningStatus())
+      GameTimer:Start(GAME_CONFIG.UpdateInterval)
+    end
+  end
+
+  local function ApplyDiagnosticModeChange()
+    local wasRunning = gameState.running
+    GameTimer:Stop()
+    activeDiagnosticMode = SelectedDiagnosticMode()
+    gameState.paused = false
+    Controls.Pause.Boolean = false
+    ResetMinimalMotion()
+    timerTickCount = 0
+    ResetMeasurement()
+
+    if RenderImmediateProtected() then
+      if wasRunning then
+        UpdateStatus(RunningStatus())
+        GameTimer:Start(GAME_CONFIG.UpdateInterval)
+      else
+        Controls.MeasuredHz.String = "0.0 Hz"
+        UpdateStatus("READY / " .. activeDiagnosticMode)
+      end
+    end
+  end
+
   GameTimer.EventHandler = function()
-    UpdateGameState()
-    if RenderGameFrame() then
-      UpdateMeasurement()
+    local success, errorMessage = pcall(GameTickUnsafe)
+    if not success then
+      HandleRuntimeError(errorMessage)
     end
   end
 
@@ -1024,30 +1226,33 @@ if Controls then
   end
 
   Controls.Pause.EventHandler = function(control)
-    if not gameState.running then
+    if not gameState.running or activeDiagnosticMode ~= "FULL GAME" then
       control.Boolean = false
       return
     end
 
     gameState.paused = control.Boolean
-    if gameState.paused then
-      UpdateStatus("PAUSED")
-    else
-      UpdateStatus("RUNNING")
-    end
-    RenderGameFrame()
+    UpdateStatus(RunningStatus())
+    RenderImmediateProtected()
   end
 
+  Controls.DiagnosticMode.EventHandler = function()
+    ApplyDiagnosticModeChange()
+  end
+
+  Controls.DiagnosticMode.Choices = DIAGNOSTIC_MODE_CHOICES
+  activeDiagnosticMode = SelectedDiagnosticMode()
   ResetGameState(gameState)
   ResetEnemies(gameState)
+  ResetMinimalMotion()
   Controls.Pause.Boolean = false
   Controls.MeasuredHz.String = "0.0 Hz"
   UpdateStatus("READY / " .. AssetAvailabilitySummary())
 
   local missingAssets = MissingAssetList()
   if missingAssets ~= "" then
-    print("[f5Rocket] Missing PNG assets; SVG fallbacks active: " .. missingAssets)
+    print("[f5Rocket] Missing PNG assets; definition-based SVG fallbacks active: " .. missingAssets)
   end
 
-  RenderGameFrame()
+  RenderImmediateProtected()
 end

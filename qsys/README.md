@@ -61,14 +61,24 @@ Its 1/8/16/32/64-instance benchmark, INLINE comparison, 30/20/15 Hz rates, and s
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.1.0`
+- Version: `0.1.1`
 - Page: `Game`
 - Logical viewport: 320×480
 - Fixed update/render target: 30 Hz
 
 The first slice implements Start, Pause, simultaneous four-direction input, cooldown-limited fire, bounded player bullets, deterministic recycling enemies, bullet/enemy AABB collision, and score. It intentionally omits enemy bullets, bosses, power-ups, lives, sound, menus, and progression.
 
-Production controls are `Viewport`, `Start`, `Pause`, `Left`, `Right`, `Up`, `Down`, `Fire`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, `ActivePlayerBullets`, and `Status`.
+Production controls are `Viewport`, `Start`, `Pause`, `Left`, `Right`, `Up`, `Down`, `Fire`, `DiagnosticMode`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, `ActivePlayerBullets`, and `Status`.
+
+`DiagnosticMode` isolates runtime failure domains without rebuilding the plugin:
+
+- `TIMER ONLY` runs the one 30 Hz timer and its one-second measurement window without game updates or per-tick `Viewport.Legend` writes.
+- `MINIMAL RENDER` moves one definition-based fallback sprite and refreshes IconData at 30 Hz.
+- `FULL GAME` runs the complete first playable slice and is the default.
+
+Every timer callback has one protected boundary. If input, state update, SVG generation, Base64 encoding, Legend encoding/assignment, or telemetry fails, the timer stops and `Status` reports the precise stage. Engineering readouts are refreshed approximately once per second; only the viewport changes at 30 Hz.
+
+For runtime regression isolation in Designer, run each mode for 60 seconds in this order: `TIMER ONLY`, `MINIMAL RENDER`, then `FULL GAME`. If the timer test passes but minimal rendering freezes, investigate IconData/SVG assignment. If both diagnostic modes pass but the full game freezes, use the reported stage to investigate game-state logic. A clean pass in all three modes confirms the stabilized fallback, telemetry, and protected-tick path in that environment.
 
 ## Shared PNG asset pipeline
 
@@ -85,7 +95,7 @@ assets/hud/
 
 The game build reads the expected PNGs from those folders and generates `plugins/game/generated/assets_data.lua`. Handwritten [`plugins/game/renderer/assets.lua`](plugins/game/renderer/assets.lua) owns XML-safe IDs, logical display dimensions, availability checks, cached `<defs>` construction, and player-direction fallback rules.
 
-Missing PNGs are expected and do not fail the build. Generated entries remain unavailable, Q-SYS debug output lists them, and the renderer uses obvious SVG geometry plus a deterministic starfield. Invalid files at an expected PNG path do fail the build.
+Missing PNGs are expected and do not fail the build. Generated entries remain unavailable, Q-SYS debug output lists them, and the renderer uses obvious SVG geometry plus a deterministic starfield. These fallbacks are cached once in `<defs>` and placed with `<use href>` just like PNG-backed sprites; their geometry is not expanded per object or recalculated per frame. Invalid files at an expected PNG path do fail the build.
 
 ## Production renderer
 
@@ -94,14 +104,14 @@ Every frame follows one fixed path:
 ```text
 game state
 → cached PNG definitions in <defs>
-→ sprite <use href="#assetId"> instances or SVG debug fallbacks
+→ sprite <use href="#assetId"> or <use href="#fallbackId"> instances
 → one complete 320×480 SVG string
 → one Crypto.Base64Encode(svg)
 → one rapidjson Button Legend
 → one Controls.Viewport.Legend assignment
 ```
 
-The asset-definition string and deterministic star positions are prepared once. Runtime performs no filesystem access, network access, or PNG encoding.
+The PNG definitions, fallback definitions, and deterministic 320×480 starfield tile are prepared once. The scrolling background places two tile instances and changes only their integer translations. Runtime performs no filesystem access, network access, or PNG encoding.
 
 ## Game modules
 
@@ -113,7 +123,7 @@ The asset-definition string and deterministic star positions are prepared once. 
 - `game/collision.lua`: player-bullet versus enemy AABB checks and scoring
 - `renderer/assets.lua`: shared artwork metadata, cached definitions, and asset selection
 - `renderer/svg.lua`: complete background-to-HUD frame serialization
-- `runtime.lua`: Q-SYS controls, one Timer, state orchestration, IconData, and telemetry
+- `runtime.lua`: Q-SYS controls, one protected Timer callback, diagnostic modes, state orchestration, centralized IconData, staged errors, and throttled telemetry
 
 ## Installation and validation
 
