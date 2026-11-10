@@ -27,6 +27,11 @@ TARGETS = {
         "entry": PLUGINS_DIR / "game" / "plugin.lua",
         "output": DIST_DIR / "f5Rocket.qplug",
     },
+    "runtime_probe": {
+        "source_root": PLUGINS_DIR / "runtime_probe",
+        "entry": PLUGINS_DIR / "runtime_probe" / "plugin.lua",
+        "output": DIST_DIR / "f5Rocket_RuntimeProbe.qplug",
+    },
 }
 
 ASSET_MANIFEST = (
@@ -217,11 +222,11 @@ def build_target(name: str) -> None:
 
 def selected_targets(arguments: list[str]) -> tuple[str, ...]:
     if len(arguments) > 1:
-        raise BuildError("usage: build.py [all|compat|game]")
+        raise BuildError("usage: build.py [all|compat|game|runtime_probe]")
 
     selected = arguments[0] if arguments else "all"
     if selected == "all":
-        return ("compat", "game")
+        return ("compat", "game", "runtime_probe")
     if selected not in TARGETS:
         raise BuildError(f"unknown build target: {selected}")
     return (selected,)

@@ -1,9 +1,10 @@
 # Q-SYS workspace
 
-This directory contains two separate include-based Q-SYS plugins:
+This directory contains three separate include-based Q-SYS plugins:
 
 - `f5Rocket_Compat.qplug` is frozen regression infrastructure for the validated SVG renderer path.
 - `f5Rocket.qplug` is the production game plugin and the only place where gameplay should grow.
+- `f5Rocket_RuntimeProbe.qplug` isolates timer, SVG-string, and IconData lifecycle behavior without game or asset dependencies.
 
 Q-SYS Designer 10.5.0 has validated the production renderer direction for 60 seconds at 30.0 Hz with 64 visible sprites: SVG `<defs>`, one PNG `<image href="data:image/png;base64,...">`, and repeated `<use href="#...">` instances. No xlink production mode is planned unless a later regression requires it.
 
@@ -12,6 +13,7 @@ Q-SYS Designer 10.5.0 has validated the production renderer direction for 60 sec
 ```text
 qsys/plugins/compat/   editable compatibility-probe source
 qsys/plugins/game/     editable production-game source
+qsys/plugins/runtime_probe/ editable isolated-runtime source
 qsys/dist/             generated Designer-installable plugins
 qsys/tools/            deterministic build and asset tooling
 qsys/compat/           compatibility fixture, procedure, and results
@@ -26,6 +28,7 @@ From the repository root:
 ```bash
 python3 qsys/tools/build.py compat
 python3 qsys/tools/build.py game
+python3 qsys/tools/build.py runtime_probe
 python3 qsys/tools/build.py all
 ```
 
@@ -42,6 +45,7 @@ Generated artifacts:
 ```text
 qsys/dist/f5Rocket_Compat.qplug
 qsys/dist/f5Rocket.qplug
+qsys/dist/f5Rocket_RuntimeProbe.qplug
 qsys/plugins/game/generated/assets_data.lua
 ```
 
@@ -55,6 +59,29 @@ qsys/plugins/game/generated/assets_data.lua
 - Page: `Probe`
 
 Its 1/8/16/32/64-instance benchmark, INLINE comparison, 30/20/15 Hz rates, and syntax switches remain intact. Treat it as a renderer regression tool; do not add game logic to it. The confirmed result and repeatable test procedure are in [`compat/README.md`](compat/README.md).
+
+## Runtime lifecycle probe
+
+- Source: [`plugins/runtime_probe/plugin.lua`](plugins/runtime_probe/plugin.lua)
+- Distribution: [`dist/f5Rocket_RuntimeProbe.qplug`](dist/f5Rocket_RuntimeProbe.qplug)
+- Plugin ID: `c84db0f2-6a9e-4f45-9cd7-15b0d5c4c09e`
+- Version: `0.1.0`
+- Page: `Probe`
+
+This plugin follows the known-good compatibility probe lifecycle: one globally scoped timer, a Toggle `Run` control, reset-before-start behavior, and no `pcall` wrapper. It deliberately contains no game modules, state pools, PNGs, asset data, background, collision, payload guard, or production diagnostic lifecycle.
+
+Run the manual matrix in Q-SYS Designer 10.5.0:
+
+1. **Test A — TIMER:** select `TIMER`, enable `Run`, and wait 60 seconds. QDS should remain responsive, `TickCount` should increase, `MeasuredHz` should remain near 30 Hz, and the viewport should remain static.
+2. **Test B — SVG:** select `SVG`, enable `Run`, and wait 60 seconds. QDS should remain responsive and counters should advance. The tiny SVG is generated at 30 Hz but deliberately is not encoded or assigned, so the viewport should not animate.
+3. **Test C — ICONDATA:** select `ICONDATA`, enable `Run`, and wait 60 seconds. A small rectangle should move horizontally through the one dynamic viewport near 30 Hz while QDS remains responsive.
+
+Interpretation:
+
+- TIMER freezes: investigate the runtime/timer/control lifecycle.
+- TIMER passes and SVG freezes: investigate per-tick Lua computation or string generation.
+- TIMER and SVG pass but ICONDATA freezes: investigate dynamic `Viewport.Legend`/`IconData` updates.
+- All three pass: the production freeze comes from code above this minimal runtime layer.
 
 ## Production game plugin
 

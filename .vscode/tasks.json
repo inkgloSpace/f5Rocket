@@ -45,6 +45,20 @@
       },
       "group": "build",
       "problemMatcher": []
+    },
+    {
+      "label": "f5Rocket: Build Runtime Probe",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "qsys/tools/build.py",
+        "runtime_probe"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }

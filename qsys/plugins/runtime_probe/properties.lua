@@ -1,0 +1,1 @@
+-- The runtime probe intentionally has no design-time properties.
