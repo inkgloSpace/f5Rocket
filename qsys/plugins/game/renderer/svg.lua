@@ -6,17 +6,6 @@ local SVG_ROOT_OPEN =
 local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. STATIC_RENDER_DEFINITIONS ..
   "</defs><rect width=\"320\" height=\"480\" fill=\"#07101f\"/>"
 
-local TIMER_ONLY_SVG = SVG_ROOT_OPEN ..
-  "<rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
-  "<text x=\"160\" y=\"224\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"16\" text-anchor=\"middle\">TIMER ONLY</text>" ..
-  "<text x=\"160\" y=\"248\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">VIEWPORT HELD STATIC</text></svg>"
-
-local MINIMAL_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. FALLBACK_PLAYER_DEFINITION ..
-  "</defs><rect width=\"320\" height=\"480\" fill=\"#07101f\"/>" ..
-  "<text x=\"160\" y=\"24\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">MINIMAL RENDER</text>" ..
-  "<use href=\"#fallback_player\" x=\""
-local MINIMAL_SVG_SUFFIX = "\" y=\"220\"/></svg>"
-
 local function AppendBackground(parts, state)
   local offset = state.backgroundOffset
   AppendTranslatedUse(parts, "fallback_starfield", 0, offset - GAME_CONFIG.LogicalHeight)
@@ -84,21 +73,10 @@ local function BuildGameSvg(state)
     tostring(state.score) .. "</text>"
   parts[#parts + 1] = "<text x=\"312\" y=\"20\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"end\">f5Rocket</text>"
 
-  if state.paused then
-    parts[#parts + 1] = "<rect x=\"78\" y=\"214\" width=\"164\" height=\"52\" fill=\"#07101f\" stroke=\"#ff9b45\"/>"
-    parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#ff9b45\" font-family=\"monospace\" font-size=\"18\" text-anchor=\"middle\">PAUSED</text>"
-  elseif not state.running then
-    parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"14\" text-anchor=\"middle\">PRESS START</text>"
+  if not state.running then
+    parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"14\" text-anchor=\"middle\">ENABLE RUN</text>"
   end
 
   parts[#parts + 1] = "</svg>"
   return table.concat(parts)
-end
-
-local function BuildTimerOnlySvg()
-  return TIMER_ONLY_SVG
-end
-
-local function BuildMinimalDiagnosticSvg(motionX)
-  return MINIMAL_SVG_PREFIX .. tostring(math.floor(motionX)) .. MINIMAL_SVG_SUFFIX
 end

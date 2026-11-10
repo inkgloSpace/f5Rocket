@@ -7,25 +7,10 @@ table.insert(controls, {
 })
 
 table.insert(controls, {
-  Name = "Start",
-  ControlType = "Button",
-  ButtonType = "Trigger",
-  DefaultValue = false,
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "Pause",
+  Name = "Run",
   ControlType = "Button",
   ButtonType = "Toggle",
   DefaultValue = false,
-  Count = 1
-})
-
-table.insert(controls, {
-  Name = "DiagnosticMode",
-  ControlType = "Text",
-  DefaultValue = "FULL GAME",
   Count = 1
 })
 

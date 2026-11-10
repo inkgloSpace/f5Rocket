@@ -39,12 +39,11 @@ if currentPage == 1 then
     })
   end
 
-  AddLabel("Diagnostic", 280)
-  AddLabel("Measured", 362)
-  AddLabel("SVG bytes", 390)
-  AddLabel("Base64 bytes", 418)
-  AddLabel("Enemies", 446)
-  AddLabel("Player bullets", 474)
+  AddLabel("Measured", 346)
+  AddLabel("SVG bytes", 374)
+  AddLabel("Base64 bytes", 402)
+  AddLabel("Enemies", 430)
+  AddLabel("Player bullets", 458)
 
   layout["Viewport"] = {
     PrettyName = "Game~Viewport",
@@ -60,26 +59,15 @@ if currentPage == 1 then
     Margin = 0
   }
 
-  layout["Start"] = {
-    PrettyName = "Game~Start",
-    Style = "Button",
-    ButtonStyle = "Trigger",
-    ButtonVisualStyle = "Flat",
-    Position = { 350, 68 },
-    Size = { 96, 32 },
-    Color = { 70, 230, 225 },
-    Legend = "START"
-  }
-
-  layout["Pause"] = {
-    PrettyName = "Game~Pause",
+  layout["Run"] = {
+    PrettyName = "Game~Run",
     Style = "Button",
     ButtonStyle = "Toggle",
     ButtonVisualStyle = "Flat",
-    Position = { 458, 68 },
-    Size = { 96, 32 },
-    Color = { 255, 155, 69 },
-    Legend = "PAUSE"
+    Position = { 350, 68 },
+    Size = { 204, 32 },
+    Color = { 70, 230, 225 },
+    Legend = "RUN"
   }
 
   local function AddButton(name, x, y, width, height, legend)
@@ -101,18 +89,11 @@ if currentPage == 1 then
   AddButton("Right", 492, 164, 56, 42, "RIGHT")
   AddButton("Fire", 356, 220, 192, 42, "FIRE")
 
-  layout["DiagnosticMode"] = {
-    PrettyName = "Game~DiagnosticMode",
-    Style = "ComboBox",
-    Position = { 458, 278 },
-    Size = { 96, 22 }
-  }
-
   layout["Status"] = {
     PrettyName = "Game~Status",
     Style = "Text",
-    Position = { 350, 310 },
-    Size = { 204, 36 },
+    Position = { 350, 278 },
+    Size = { 204, 48 },
     IsReadOnly = true,
     FontSize = 9,
     HTextAlign = "Center",
@@ -131,9 +112,9 @@ if currentPage == 1 then
     }
   end
 
-  AddReadout("MeasuredHz", 360)
-  AddReadout("SvgBytes", 388)
-  AddReadout("SvgBase64Bytes", 416)
-  AddReadout("ActiveEnemies", 444)
-  AddReadout("ActivePlayerBullets", 472)
+  AddReadout("MeasuredHz", 344)
+  AddReadout("SvgBytes", 372)
+  AddReadout("SvgBase64Bytes", 400)
+  AddReadout("ActiveEnemies", 428)
+  AddReadout("ActivePlayerBullets", 456)
 end

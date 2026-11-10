@@ -70,6 +70,8 @@ Its 1/8/16/32/64-instance benchmark, INLINE comparison, 30/20/15 Hz rates, and s
 
 This plugin follows the known-good compatibility probe lifecycle: one globally scoped timer, a Toggle `Run` control, reset-before-start behavior, and no `pcall` wrapper. It deliberately contains no game modules, state pools, PNGs, asset data, background, collision, payload guard, or production diagnostic lifecycle.
 
+All three runtime-probe stages—TIMER, SVG, and ICONDATA—have passed at 30 Hz in Q-SYS Designer 10.5.0. Keep this plugin frozen as runtime regression infrastructure.
+
 Run the manual matrix in Q-SYS Designer 10.5.0:
 
 1. **Test A — TIMER:** select `TIMER`, enable `Run`, and wait 60 seconds. QDS should remain responsive, `TickCount` should increase, `MeasuredHz` should remain near 30 Hz, and the viewport should remain static.
@@ -88,24 +90,21 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.1.2`
+- Version: `0.2.0`
 - Page: `Game`
 - Logical viewport: 320×480
 - Fixed update/render target: 30 Hz
 
-The first slice implements Start, Pause, simultaneous four-direction input, cooldown-limited fire, bounded player bullets, deterministic recycling enemies, bullet/enemy AABB collision, and score. It intentionally omits enemy bullets, bosses, power-ups, lives, sound, menus, and progression.
+The first slice implements a Toggle Run lifecycle, simultaneous four-direction input, cooldown-limited fire, bounded player bullets, deterministic recycling enemies, bullet/enemy AABB collision, and score. It intentionally omits Pause during runtime stabilization, along with enemy bullets, bosses, power-ups, lives, sound, menus, and progression.
 
-Production controls are `Viewport`, `Start`, `Pause`, `Left`, `Right`, `Up`, `Down`, `Fire`, `DiagnosticMode`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, `ActivePlayerBullets`, and `Status`.
+Production controls are `Viewport`, `Run`, `Left`, `Right`, `Up`, `Down`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. `Run` is a Toggle; movement and fire remain Momentary controls read directly during each timer tick.
 
-`DiagnosticMode` isolates runtime failure domains without rebuilding the plugin:
+The production lifecycle now directly follows the proven probes:
 
-- `TIMER ONLY` runs the one 30 Hz timer and its one-second measurement window without game updates or per-tick `Viewport.Legend` writes.
-- `MINIMAL RENDER` moves one definition-based fallback sprite and refreshes IconData at 30 Hz.
-- `FULL GAME` runs the complete first playable slice and is the default.
-
-Every timer callback has one protected boundary. If input, state update, SVG generation, Base64 encoding, Legend encoding/assignment, or telemetry fails, the timer stops and `Status` reports the precise stage. Engineering readouts are refreshed approximately once per second; only the viewport changes at 30 Hz.
-
-For runtime regression isolation in Designer, run each mode for 60 seconds in this order: `TIMER ONLY`, `MINIMAL RENDER`, then `FULL GAME`. If the timer test passes but minimal rendering freezes, investigate IconData/SVG assignment. If both diagnostic modes pass but the full game freezes, use the reported stage to investigate game-state logic. A clean pass in all three modes confirms the stabilized fallback, telemetry, and protected-tick path in that environment.
+- Enabling `Run` stops the timer, resets game state and enemies, renders one initial frame, reports `RUNNING`, and starts the single timer at 30 Hz.
+- Disabling `Run` stops the timer, sets `gameState.running` false, and reports `STOPPED`.
+- Each timer tick reads input, updates the existing game state, renders and assigns one frame, then updates visible telemetry only when the approximately one-second measurement window closes.
+- No production diagnostic mode, Pause control, stage machine, or whole-tick `pcall` remains. Those diagnostics belong to the separate runtime probe.
 
 ## Shared PNG asset pipeline
 
@@ -158,7 +157,7 @@ The eventual runtime background should use small repeating ocean tiles—ideally
 - `game/collision.lua`: player-bullet versus enemy AABB checks and scoring
 - `renderer/assets.lua`: shared artwork metadata, cached definitions, and asset selection
 - `renderer/svg.lua`: complete background-to-HUD frame serialization
-- `runtime.lua`: Q-SYS controls, one protected Timer callback, diagnostic modes, state orchestration, centralized IconData, staged errors, and throttled telemetry
+- `runtime.lua`: proven Toggle lifecycle, one Timer callback, state orchestration, centralized IconData, and one-second telemetry
 
 ## Installation and validation
 

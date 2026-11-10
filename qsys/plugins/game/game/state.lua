@@ -1,7 +1,6 @@
 local function CreateGameState()
   local state = {
     running = false,
-    paused = false,
     score = 0,
     time = 0,
     ticks = 0,
@@ -50,7 +49,6 @@ end
 
 local function ResetGameState(state)
   state.running = false
-  state.paused = false
   state.score = 0
   state.time = 0
   state.ticks = 0
