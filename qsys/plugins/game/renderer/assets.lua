@@ -5,8 +5,8 @@ local ASSET_MANIFEST = {
   { Id = "enemy_easy", Source = "assets/enemy/enemy_easy.png", Width = 34, Height = 34 },
   { Id = "enemy_medium", Source = "assets/enemy/enemy_medium.png", Width = 34, Height = 34 },
   { Id = "enemy_hard", Source = "assets/enemy/enemy_hard.png", Width = 34, Height = 34 },
-  { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 10, Height = 22 },
-  { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 12, Height = 20 },
+  { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 10, Height = 18 },
+  { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 10, Height = 18 },
   { Id = "explosion_01", Source = "assets/explosion/explosion_01.png", Width = 44, Height = 44 },
   { Id = "explosion_02", Source = "assets/explosion/explosion_02.png", Width = 44, Height = 44 },
   { Id = "explosion_03", Source = "assets/explosion/explosion_03.png", Width = 44, Height = 44 },
@@ -33,17 +33,22 @@ local FALLBACK_ENEMY_DEFINITION =
   "<g id=\"fallback_enemy\"><rect width=\"34\" height=\"34\" fill=\"#ff5c68\"/>" ..
   "<path d=\"M5 9H29L24 29H10Z\" fill=\"#791f3d\"/></g>"
 
-local FALLBACK_PLAYER_BULLET_DEFINITION =
-  "<g id=\"fallback_player_bullet\"><rect width=\"10\" height=\"22\" fill=\"#5ffcff\"/></g>"
+local PLAYER_BULLET_VISIBLE_DEFINITION =
+  "<g id=\"player_bullet_visible\">" ..
+  "<rect x=\"0\" y=\"0\" width=\"10\" height=\"18\" rx=\"4\" fill=\"#071827\"/>" ..
+  "<rect x=\"1\" y=\"1\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#23d9ff\"/>" ..
+  "<rect x=\"3\" y=\"2\" width=\"4\" height=\"14\" rx=\"2\" fill=\"#8ff8ff\"/>" ..
+  "<rect x=\"4\" y=\"3\" width=\"2\" height=\"10\" fill=\"#ffffff\"/>" ..
+  "</g>"
 
 -- Hostile shots deliberately use SVG geometry rather than the small source
 -- PNG so their silhouette and hot core remain readable on every stage.
 local ENEMY_BULLET_VISIBLE_DEFINITION =
   "<g id=\"enemy_bullet_visible\">" ..
-  "<rect x=\"0\" y=\"0\" width=\"12\" height=\"20\" rx=\"6\" fill=\"#140818\"/>" ..
-  "<rect x=\"1\" y=\"1\" width=\"10\" height=\"18\" rx=\"5\" fill=\"#ff315f\"/>" ..
-  "<rect x=\"3\" y=\"2\" width=\"6\" height=\"16\" rx=\"3\" fill=\"#ffb52e\"/>" ..
-  "<rect x=\"5\" y=\"4\" width=\"2\" height=\"11\" fill=\"#ffffff\"/>" ..
+  "<rect x=\"0\" y=\"0\" width=\"10\" height=\"18\" rx=\"4\" fill=\"#160811\"/>" ..
+  "<rect x=\"1\" y=\"1\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#ff315f\"/>" ..
+  "<rect x=\"3\" y=\"2\" width=\"4\" height=\"14\" rx=\"2\" fill=\"#ffad2f\"/>" ..
+  "<rect x=\"4\" y=\"3\" width=\"2\" height=\"10\" fill=\"#ffffff\"/>" ..
   "</g>"
 
 local FALLBACK_EXPLOSION_DEFINITION =
@@ -127,7 +132,7 @@ local BOSS_ORIENTATION_DEFINITIONS = table.concat({
 
 local DYNAMIC_GAMEPLAY_DEFINITIONS = table.concat(DYNAMIC_DEFINITION_PARTS) ..
   FALLBACK_PLAYER_DEFINITION .. FALLBACK_ENEMY_DEFINITION ..
-  FALLBACK_PLAYER_BULLET_DEFINITION .. ENEMY_BULLET_VISIBLE_DEFINITION ..
+  PLAYER_BULLET_VISIBLE_DEFINITION .. ENEMY_BULLET_VISIBLE_DEFINITION ..
   FALLBACK_EXPLOSION_DEFINITION .. FALLBACK_BOSS_EASY_DEFINITION ..
   FALLBACK_BOSS_MEDIUM_DEFINITION .. FALLBACK_BOSS_FINAL_DEFINITION ..
   ENEMY_ORIENTATION_DEFINITIONS .. BOSS_ORIENTATION_DEFINITIONS

@@ -12,10 +12,11 @@ local GAME_CONFIG = {
   PlayerHeight = 48,
   PlayerSpeed = 4,
   PlayerDiagonalSpeed = 3,
+  CardinalChordGraceTicks = 4,
   PlayerStartY = 414,
 
   PlayerBulletWidth = 10,
-  PlayerBulletHeight = 22,
+  PlayerBulletHeight = 18,
   PlayerBulletSpeed = 10,
   FireIntervalTicks = 5,
 
@@ -25,8 +26,8 @@ local GAME_CONFIG = {
   EnemyFireSafetyDistance = 72,
   EnemyFireRetryTicks = 5,
 
-  EnemyBulletWidth = 12,
-  EnemyBulletHeight = 20,
+  EnemyBulletWidth = 10,
+  EnemyBulletHeight = 18,
 
   ExplosionWidth = 44,
   ExplosionHeight = 44,

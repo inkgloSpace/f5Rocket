@@ -90,7 +90,7 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.5.0`
+- Version: `0.5.1`
 - Page: `Game`
 - Logical viewport: 320×480; Q-SYS display size: 480×720
 - Fixed update/render target: 30 Hz
@@ -100,6 +100,8 @@ The current slice keeps the proven Toggle Run lifecycle and implements a three-s
 Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, `Fire`, `UpLeft`, `UpRight`, `DownLeft`, `DownRight`, `AutoFire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run`, `Pause`, and `AutoFire` are Toggles; all direction and manual-fire controls are Momentary.
 
 The four diagonal controls and AutoFire form a smartphone-friendly UCI pad without replacing the original simultaneous engine inputs. Each tick OR-combines the mobile diagonals with `Up`, `Down`, `Left`, and `Right`, and combines `Fire` with `AutoFire`. Contradictory axes still cancel inside the existing player movement code, diagonal speed remains normalized, and the existing fire cooldown remains authoritative.
+
+Cardinal Chord Assist retains a recently released orthogonal cardinal intent for a four-tick detection window. Once a mobile slide such as Right→Up is recognized, the synthetic Right remains only while Up is held; release, explicit diagonals, opposing real input, Pause resume, Stop, and new-game Start clear stale state. True simultaneous inputs still resolve immediately without the assist.
 
 `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, and `Fire` are also available as Q-SYS input control pins through **Properties → Control Pins**. These pins use the same Control objects as the panel buttons: an external HIGH holds a Momentary movement/fire input, while the Run and Pause Boolean values follow their Toggle semantics. Telemetry and viewport controls are not exposed as pins.
 
@@ -143,7 +145,9 @@ Generation and 30 Hz embedding are separate concerns. Generated data exposes dyn
 
 Each enemy and boss sprite has one reusable downward-facing wrapper definition with a centralized 180-degree transform. Hostile instances select those wrappers and never repeat rotation markup.
 
-Enemy and boss shots use one reusable 12×20 SVG definition with a dark silhouette, magenta body, orange inner glow, and white core. The original enemy-bullet PNG remains in the generated manifest for compatibility, but normal hostile shots render as `<use href="#enemy_bullet_visible">` so the projectile stays legible over all three stage palettes.
+Player and hostile shots now share a 10×18 logical envelope but use separate reusable SVG definitions. Player fire uses a navy silhouette with cyan and white energy layers; enemy and boss fire uses a dark silhouette with magenta, orange, and white layers. The source bullet PNGs remain in the generated manifest for compatibility, while active shots render through `<use>` instances.
+
+The Medium enemy keeps its original 34×34 silhouette and alpha with an amber/orange/pale-yellow palette over a deep navy outline. The Hard enemy retains the same geometry and alpha with an electric-lime/pale-green palette over an almost-black outline. Easy enemy artwork is unchanged.
 
 Missing PNGs do not fail the build. Dynamic sprites fall back to cached SVG definitions; missing stage backgrounds use a deterministic static fallback generated only when that background is assigned. Invalid files at an expected PNG path do fail the build.
 
