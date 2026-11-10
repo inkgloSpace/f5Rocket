@@ -1,4 +1,4 @@
-local function SpawnExplosion(state, x, y)
+local function ScheduleExplosion(state, x, y, delayTicks)
   for index = 1, GAME_CONFIG.MaxExplosions do
     local explosion = state.explosions[index]
     if not explosion.active then
@@ -7,6 +7,7 @@ local function SpawnExplosion(state, x, y)
       explosion.y = math.floor(y)
       explosion.frame = 1
       explosion.frameTicksRemaining = GAME_CONFIG.ExplosionFrameTicks
+      explosion.delayTicks = delayTicks or 0
       return true
     end
   end
@@ -14,18 +15,27 @@ local function SpawnExplosion(state, x, y)
   return false
 end
 
+
+local function SpawnExplosion(state, x, y)
+  return ScheduleExplosion(state, x, y, 0)
+end
+
 local function UpdateExplosions(state)
   for index = 1, GAME_CONFIG.MaxExplosions do
     local explosion = state.explosions[index]
     if explosion.active then
-      explosion.frameTicksRemaining = explosion.frameTicksRemaining - 1
+      if explosion.delayTicks > 0 then
+        explosion.delayTicks = explosion.delayTicks - 1
+      else
+        explosion.frameTicksRemaining = explosion.frameTicksRemaining - 1
 
-      if explosion.frameTicksRemaining <= 0 then
-        explosion.frame = explosion.frame + 1
-        if explosion.frame > GAME_CONFIG.ExplosionFrames then
-          explosion.active = false
-        else
-          explosion.frameTicksRemaining = GAME_CONFIG.ExplosionFrameTicks
+        if explosion.frameTicksRemaining <= 0 then
+          explosion.frame = explosion.frame + 1
+          if explosion.frame > GAME_CONFIG.ExplosionFrames then
+            explosion.active = false
+          else
+            explosion.frameTicksRemaining = GAME_CONFIG.ExplosionFrameTicks
+          end
         end
       end
     end

@@ -1,94 +1,61 @@
 local ASSET_MANIFEST = {
-  { Id = "player_idle", Source = "assets/player/player_idle.png", Width = 32, Height = 40 },
-  { Id = "player_left", Source = "assets/player/player_left.png", Width = 32, Height = 40 },
-  { Id = "player_right", Source = "assets/player/player_right.png", Width = 32, Height = 40 },
-  { Id = "enemy_01", Source = "assets/enemy/enemy_01.png", Width = 28, Height = 28 },
-  { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 6, Height = 12 },
-  { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 6, Height = 8 },
-  { Id = "explosion_01", Source = "assets/explosion/explosion_01.png", Width = 32, Height = 32 },
-  { Id = "explosion_02", Source = "assets/explosion/explosion_02.png", Width = 32, Height = 32 },
-  { Id = "explosion_03", Source = "assets/explosion/explosion_03.png", Width = 32, Height = 32 },
+  { Id = "player_idle", Source = "assets/player/player_idle.png", Width = 40, Height = 48 },
+  { Id = "player_left", Source = "assets/player/player_left.png", Width = 40, Height = 48 },
+  { Id = "player_right", Source = "assets/player/player_right.png", Width = 40, Height = 48 },
+  { Id = "enemy_easy", Source = "assets/enemy/enemy_easy.png", Width = 34, Height = 34 },
+  { Id = "enemy_medium", Source = "assets/enemy/enemy_medium.png", Width = 34, Height = 34 },
+  { Id = "enemy_hard", Source = "assets/enemy/enemy_hard.png", Width = 34, Height = 34 },
+  { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 10, Height = 22 },
+  { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 10, Height = 16 },
+  { Id = "explosion_01", Source = "assets/explosion/explosion_01.png", Width = 44, Height = 44 },
+  { Id = "explosion_02", Source = "assets/explosion/explosion_02.png", Width = 44, Height = 44 },
+  { Id = "explosion_03", Source = "assets/explosion/explosion_03.png", Width = 44, Height = 44 },
+  { Id = "mini_boss_easy", Source = "assets/boss/mini_boss_easy.png", Width = 72, Height = 56 },
+  { Id = "mini_boss_medium", Source = "assets/boss/mini_boss_medium.png", Width = 88, Height = 64 },
+  { Id = "final_boss", Source = "assets/boss/final_boss.png", Width = 120, Height = 80 },
+  { Id = "background_easy", Source = "assets/background/background_easy.png", Width = 320, Height = 480 },
+  { Id = "background_medium", Source = "assets/background/background_medium.png", Width = 320, Height = 480 },
+  { Id = "background_hard", Source = "assets/background/background_hard.png", Width = 320, Height = 480 },
+  { Id = "qsys_q_mark", Source = "assets/branding/qsys_q_mark.png", Width = 64, Height = 64 },
+  { Id = "enemy_01", Source = "assets/enemy/enemy_01.png", Width = 34, Height = 34 },
   { Id = "background_tile", Source = "assets/background/background_tile.png", Width = 320, Height = 480 }
 }
 
--- Only assets used by the current 30 Hz playable slice belong in its SVG.
--- Large backgrounds and feature-deferred sprites remain generated and cached,
--- but are not copied into every dynamic frame.
-local GAMEPLAY_ASSET_IDS = {
-  player_idle = true,
-  player_left = true,
-  player_right = true,
-  enemy_01 = true,
-  bullet_player = true,
-  bullet_enemy = true,
-  explosion_01 = true,
-  explosion_02 = true,
-  explosion_03 = true
-}
+local DYNAMIC_GAMEPLAY_ASSETS = GENERATED_DYNAMIC_GAMEPLAY_ASSET_IDS
+local STATIC_BACKGROUND_ASSETS = GENERATED_STATIC_BACKGROUND_ASSET_IDS
+local BRANDING_ASSETS = GENERATED_BRANDING_ASSET_IDS
 
-local LARGE_BACKGROUND_ASSET_IDS = {
-  background_tile = true
-}
-
-local STARFIELD = {
-  { 12, 18, 1 }, { 48, 52, 2 }, { 86, 31, 1 }, { 130, 74, 1 },
-  { 176, 22, 2 }, { 224, 64, 1 }, { 282, 36, 1 }, { 308, 92, 2 },
-  { 28, 126, 1 }, { 70, 158, 1 }, { 112, 112, 2 }, { 154, 174, 1 },
-  { 202, 138, 1 }, { 248, 186, 2 }, { 296, 146, 1 }, { 18, 226, 2 },
-  { 58, 268, 1 }, { 104, 214, 1 }, { 146, 286, 2 }, { 190, 242, 1 },
-  { 236, 304, 1 }, { 278, 258, 2 }, { 314, 326, 1 }, { 34, 362, 1 },
-  { 82, 414, 2 }, { 126, 348, 1 }, { 170, 438, 1 }, { 216, 382, 2 },
-  { 260, 456, 1 }, { 302, 402, 1 }, { 54, 472, 1 }, { 244, 18, 1 }
-}
-
--- Fallback geometry is definition-based so the no-artwork path exercises the
--- same Q-SYS <defs>/<use href> mechanism as production PNG sprites.
 local FALLBACK_PLAYER_DEFINITION =
-  "<g id=\"fallback_player\"><polygon points=\"16,0 31,36 20,31 16,40 12,31 1,36\" fill=\"#46e6e1\"/>" ..
-  "<rect x=\"13\" y=\"15\" width=\"6\" height=\"16\" fill=\"#ffffff\"/>" ..
-  "<text x=\"16\" y=\"28\" fill=\"#07101f\" font-family=\"monospace\" font-size=\"8\" text-anchor=\"middle\">P</text></g>"
+  "<g id=\"fallback_player\"><polygon points=\"20,0 39,44 25,38 20,48 15,38 1,44\" fill=\"#46e6e1\"/>" ..
+  "<rect x=\"16\" y=\"17\" width=\"8\" height=\"20\" fill=\"#ffffff\"/></g>"
 
 local FALLBACK_ENEMY_DEFINITION =
-  "<g id=\"fallback_enemy\"><rect width=\"28\" height=\"28\" fill=\"#ff5c68\"/>" ..
-  "<path d=\"M4 8H24L20 24H8Z\" fill=\"#791f3d\"/>" ..
-  "<text x=\"14\" y=\"19\" fill=\"#ffffff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">E</text></g>"
+  "<g id=\"fallback_enemy\"><rect width=\"34\" height=\"34\" fill=\"#ff5c68\"/>" ..
+  "<path d=\"M5 9H29L24 29H10Z\" fill=\"#791f3d\"/></g>"
 
 local FALLBACK_PLAYER_BULLET_DEFINITION =
-  "<g id=\"fallback_player_bullet\"><rect width=\"6\" height=\"12\" fill=\"#ffe66d\"/></g>"
+  "<g id=\"fallback_player_bullet\"><rect width=\"10\" height=\"22\" fill=\"#5ffcff\"/></g>"
 
 local FALLBACK_ENEMY_BULLET_DEFINITION =
-  "<g id=\"fallback_enemy_bullet\"><rect width=\"6\" height=\"8\" fill=\"#ff9b45\"/></g>"
+  "<g id=\"fallback_enemy_bullet\"><rect width=\"10\" height=\"16\" fill=\"#ff6b9d\"/></g>"
 
 local FALLBACK_EXPLOSION_DEFINITION =
-  "<g id=\"fallback_explosion\"><path d=\"M16 0L20 11L32 16L20 21L16 32L12 21L0 16L12 11Z\" fill=\"#ff9b45\"/></g>"
+  "<g id=\"fallback_explosion\"><path d=\"M22 0L27 15L44 22L27 29L22 44L17 29L0 22L17 15Z\" fill=\"#ff9b45\"/></g>"
 
-local FALLBACK_STARFIELD_PARTS = { "<g id=\"fallback_starfield\">" }
-for index = 1, #STARFIELD do
-  local star = STARFIELD[index]
-  local color = "#7088a8"
-  if star[3] == 2 then
-    color = "#d7f7ff"
-  end
-  FALLBACK_STARFIELD_PARTS[#FALLBACK_STARFIELD_PARTS + 1] =
-    "<rect x=\"" .. tostring(star[1]) .. "\" y=\"" .. tostring(star[2]) ..
-    "\" width=\"" .. tostring(star[3]) .. "\" height=\"" ..
-    tostring(star[3]) .. "\" fill=\"" .. color .. "\"/>"
-end
-FALLBACK_STARFIELD_PARTS[#FALLBACK_STARFIELD_PARTS + 1] = "</g>"
-local FALLBACK_STARFIELD_DEFINITION = table.concat(FALLBACK_STARFIELD_PARTS)
+local FALLBACK_BOSS_EASY_DEFINITION =
+  "<g id=\"fallback_boss_easy\"><rect width=\"72\" height=\"56\" fill=\"#42d9ff\"/>" ..
+  "<rect x=\"12\" y=\"12\" width=\"48\" height=\"32\" fill=\"#135f8a\"/></g>"
 
-local GAMEPLAY_FALLBACK_DEFINITIONS = table.concat({
-  FALLBACK_PLAYER_DEFINITION,
-  FALLBACK_ENEMY_DEFINITION,
-  FALLBACK_PLAYER_BULLET_DEFINITION,
-  FALLBACK_ENEMY_BULLET_DEFINITION,
-  FALLBACK_EXPLOSION_DEFINITION,
-  FALLBACK_STARFIELD_DEFINITION
-})
+local FALLBACK_BOSS_MEDIUM_DEFINITION =
+  "<g id=\"fallback_boss_medium\"><rect width=\"88\" height=\"64\" fill=\"#ba65ff\"/>" ..
+  "<rect x=\"14\" y=\"14\" width=\"60\" height=\"36\" fill=\"#572080\"/></g>"
+
+local FALLBACK_BOSS_FINAL_DEFINITION =
+  "<g id=\"fallback_boss_final\"><rect width=\"120\" height=\"80\" fill=\"#ff3d9b\"/>" ..
+  "<rect x=\"18\" y=\"16\" width=\"84\" height=\"48\" fill=\"#4a1038\"/></g>"
 
 local ASSETS = {}
-local GAMEPLAY_ASSET_DEFINITION_PARTS = {}
-local LARGE_BACKGROUND_ASSET_DEFINITION_PARTS = {}
+local DYNAMIC_DEFINITION_PARTS = {}
 local RUNTIME_DEFINITION_AVAILABLE = {}
 local MISSING_ASSET_PATHS = {}
 local availableAssetCount = 0
@@ -104,38 +71,59 @@ for index = 1, #ASSET_MANIFEST do
     Width = metadata.Width,
     Height = metadata.Height,
     Available = available,
-    DataUri = available and generated.DataUri or ""
+    DataUri = available and generated.DataUri or "",
+    SourceBytes = available and generated.SourceBytes or 0,
+    EncodedBytes = available and generated.EncodedBytes or 0
   }
 
   if available then
     availableAssetCount = availableAssetCount + 1
-    local definition =
-      "<image id=\"" .. metadata.Id .. "\" href=\"" .. generated.DataUri ..
-      "\" width=\"" .. tostring(metadata.Width) .. "\" height=\"" ..
-      tostring(metadata.Height) .. "\" preserveAspectRatio=\"none\"/>"
-
-    if GAMEPLAY_ASSET_IDS[metadata.Id] then
-      GAMEPLAY_ASSET_DEFINITION_PARTS[#GAMEPLAY_ASSET_DEFINITION_PARTS + 1] = definition
+    if DYNAMIC_GAMEPLAY_ASSETS[metadata.Id] then
+      DYNAMIC_DEFINITION_PARTS[#DYNAMIC_DEFINITION_PARTS + 1] =
+        "<image id=\"" .. metadata.Id .. "\" href=\"" .. generated.DataUri ..
+        "\" width=\"" .. tostring(metadata.Width) .. "\" height=\"" ..
+        tostring(metadata.Height) .. "\" preserveAspectRatio=\"none\"/>"
       RUNTIME_DEFINITION_AVAILABLE[metadata.Id] = true
-    elseif LARGE_BACKGROUND_ASSET_IDS[metadata.Id] then
-      LARGE_BACKGROUND_ASSET_DEFINITION_PARTS[#LARGE_BACKGROUND_ASSET_DEFINITION_PARTS + 1] = definition
     end
   else
     MISSING_ASSET_PATHS[#MISSING_ASSET_PATHS + 1] = metadata.Source
   end
 end
 
-local GAMEPLAY_ASSET_DEFINITIONS = table.concat(GAMEPLAY_ASSET_DEFINITION_PARTS)
-local LARGE_BACKGROUND_ASSET_DEFINITIONS = table.concat(LARGE_BACKGROUND_ASSET_DEFINITION_PARTS)
-local enemyFacingSourceId = "fallback_enemy"
-if RUNTIME_DEFINITION_AVAILABLE["enemy_01"] then
-  enemyFacingSourceId = "enemy_01"
+local function RuntimeSourceId(assetId, fallbackId)
+  if RUNTIME_DEFINITION_AVAILABLE[assetId] then
+    return assetId
+  end
+  return fallbackId
 end
-local ENEMY_FACING_DOWN_DEFINITION =
-  "<g id=\"enemy_facing_down\"><use href=\"#" .. enemyFacingSourceId ..
-  "\" transform=\"rotate(180 14 14)\"/></g>"
-local STATIC_RENDER_DEFINITIONS = GAMEPLAY_ASSET_DEFINITIONS ..
-  GAMEPLAY_FALLBACK_DEFINITIONS .. ENEMY_FACING_DOWN_DEFINITION
+
+local ENEMY_ORIENTATION_DEFINITIONS = table.concat({
+  "<g id=\"enemy_easy_down\"><use href=\"#" .. RuntimeSourceId("enemy_easy", "fallback_enemy") ..
+    "\" transform=\"rotate(180 17 17)\"/></g>",
+  "<g id=\"enemy_medium_down\"><use href=\"#" .. RuntimeSourceId("enemy_medium", "fallback_enemy") ..
+    "\" transform=\"rotate(180 17 17)\"/></g>",
+  "<g id=\"enemy_hard_down\"><use href=\"#" .. RuntimeSourceId("enemy_hard", "fallback_enemy") ..
+    "\" transform=\"rotate(180 17 17)\"/></g>"
+})
+
+local BOSS_ORIENTATION_DEFINITIONS = table.concat({
+  "<g id=\"boss_mini_easy_down\"><use href=\"#" ..
+    RuntimeSourceId("mini_boss_easy", "fallback_boss_easy") ..
+    "\" transform=\"rotate(180 36 28)\"/></g>",
+  "<g id=\"boss_mini_medium_down\"><use href=\"#" ..
+    RuntimeSourceId("mini_boss_medium", "fallback_boss_medium") ..
+    "\" transform=\"rotate(180 44 32)\"/></g>",
+  "<g id=\"boss_final_down\"><use href=\"#" ..
+    RuntimeSourceId("final_boss", "fallback_boss_final") ..
+    "\" transform=\"rotate(180 60 40)\"/></g>"
+})
+
+local DYNAMIC_GAMEPLAY_DEFINITIONS = table.concat(DYNAMIC_DEFINITION_PARTS) ..
+  FALLBACK_PLAYER_DEFINITION .. FALLBACK_ENEMY_DEFINITION ..
+  FALLBACK_PLAYER_BULLET_DEFINITION .. FALLBACK_ENEMY_BULLET_DEFINITION ..
+  FALLBACK_EXPLOSION_DEFINITION .. FALLBACK_BOSS_EASY_DEFINITION ..
+  FALLBACK_BOSS_MEDIUM_DEFINITION .. FALLBACK_BOSS_FINAL_DEFINITION ..
+  ENEMY_ORIENTATION_DEFINITIONS .. BOSS_ORIENTATION_DEFINITIONS
 
 local function AssetAvailable(assetId)
   local asset = ASSETS[assetId]
@@ -151,18 +139,8 @@ local function AppendDefinitionUse(parts, definitionId, x, y)
     tostring(math.floor(x)) .. "\" y=\"" .. tostring(math.floor(y)) .. "\"/>"
 end
 
-local function AppendTranslatedUse(parts, definitionId, x, y)
-  parts[#parts + 1] = "<use href=\"#" .. definitionId ..
-    "\" transform=\"translate(" .. tostring(math.floor(x)) .. " " ..
-    tostring(math.floor(y)) .. ")\"/>"
-end
-
 local function AppendSpriteUse(parts, assetId, fallbackId, x, y)
-  if RuntimeDefinitionAvailable(assetId) then
-    AppendDefinitionUse(parts, assetId, x, y)
-  else
-    AppendDefinitionUse(parts, fallbackId, x, y)
-  end
+  AppendDefinitionUse(parts, RuntimeSourceId(assetId, fallbackId), x, y)
 end
 
 local function ResolvePlayerDefinition(direction)
@@ -172,22 +150,24 @@ local function ResolvePlayerDefinition(direction)
   if direction == "right" and RuntimeDefinitionAvailable("player_right") then
     return "player_right"
   end
-  if RuntimeDefinitionAvailable("player_idle") then
-    return "player_idle"
+  return RuntimeSourceId("player_idle", "fallback_player")
+end
+
+local function ResolveBossDefinition(bossType)
+  if bossType == "MINI_EASY" then
+    return "boss_mini_easy_down"
+  elseif bossType == "MINI_MEDIUM" then
+    return "boss_mini_medium_down"
   end
-  return "fallback_player"
+  return "boss_final_down"
 end
 
 local function AssetAvailabilitySummary()
   return tostring(availableAssetCount) .. "/" .. tostring(#ASSET_MANIFEST) .. " ASSETS"
 end
 
-local function GameplayAssetDefinitionBytes()
-  return #GAMEPLAY_ASSET_DEFINITIONS
-end
-
-local function LargeBackgroundAssetDefinitionBytes()
-  return #LARGE_BACKGROUND_ASSET_DEFINITIONS
+local function DynamicGameplayDefinitionBytes()
+  return #DYNAMIC_GAMEPLAY_DEFINITIONS
 end
 
 local function MissingAssetList()

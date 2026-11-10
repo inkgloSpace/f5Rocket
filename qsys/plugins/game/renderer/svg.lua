@@ -1,19 +1,44 @@
 local SVG_ROOT_OPEN =
   "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 480\" width=\"320\" height=\"480\" shape-rendering=\"crispEdges\">"
 
--- Asset and fallback definitions are assembled once when the plugin runtime
--- initializes. Per-frame serialization only emits positions, state, and HUD.
-local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" .. STATIC_RENDER_DEFINITIONS ..
-  "</defs><rect width=\"320\" height=\"480\" fill=\"#07101f\"/>"
+-- The dynamic frame is intentionally transparent. Stage artwork lives in the
+-- low-frequency BackgroundViewport and is never copied into this prefix.
+local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" ..
+  DYNAMIC_GAMEPLAY_DEFINITIONS .. "</defs>"
 
-local function AppendBackground(parts, state)
-  local offset = state.backgroundOffset
-  AppendTranslatedUse(parts, "fallback_starfield", 0, offset - GAME_CONFIG.LogicalHeight)
-  AppendTranslatedUse(parts, "fallback_starfield", 0, offset)
+local FALLBACK_BACKGROUND_COLORS = {
+  [1] = "#083b69",
+  [2] = "#32145f",
+  [3] = "#090d2a"
+}
+
+local function BuildStageBackgroundSvg(stageIndex)
+  local profile = STAGE_PROFILES[stageIndex]
+  local asset = ASSETS[profile.BackgroundAsset]
+  local parts = { SVG_ROOT_OPEN }
+
+  if asset ~= nil and asset.Available then
+    parts[#parts + 1] = "<image href=\"" .. asset.DataUri ..
+      "\" width=\"320\" height=\"480\" preserveAspectRatio=\"none\"/>"
+  else
+    parts[#parts + 1] = "<rect width=\"320\" height=\"480\" fill=\"" ..
+      FALLBACK_BACKGROUND_COLORS[stageIndex] .. "\"/>"
+    for index = 1, 28 do
+      local x = (index * 47 + stageIndex * 19) % GAME_CONFIG.LogicalWidth
+      local y = (index * 83 + stageIndex * 31) % GAME_CONFIG.LogicalHeight
+      local size = 1 + (index % 2)
+      parts[#parts + 1] = "<rect x=\"" .. tostring(x) .. "\" y=\"" ..
+        tostring(y) .. "\" width=\"" .. tostring(size) .. "\" height=\"" ..
+        tostring(size) .. "\" fill=\"#d7f7ff\"/>"
+    end
+  end
+
+  parts[#parts + 1] = "</svg>"
+  return table.concat(parts), profile.BackgroundAsset
 end
 
-local function AppendEnemy(parts, enemy)
-  AppendDefinitionUse(parts, "enemy_facing_down", enemy.x, enemy.y)
+local function AppendEnemy(parts, state, enemy)
+  AppendDefinitionUse(parts, GetStageProfile(state).EnemyDefinition, enemy.x, enemy.y)
 end
 
 local function AppendPlayerBullet(parts, bullet)
@@ -33,19 +58,60 @@ local function AppendExplosion(parts, explosion)
   AppendSpriteUse(parts, assetId, "fallback_explosion", explosion.x, explosion.y)
 end
 
+local function AppendBoss(parts, boss)
+  AppendDefinitionUse(parts, ResolveBossDefinition(boss.bossType), boss.x, boss.y)
+end
+
+local function AppendHud(parts, state)
+  local profile = GetStageProfile(state)
+  local scoreText = string.format("%06d", state.score)
+
+  parts[#parts + 1] = "<rect x=\"0\" y=\"0\" width=\"320\" height=\"31\" fill=\"#07101f\"/>"
+  parts[#parts + 1] = "<text x=\"7\" y=\"19\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"10\">Q-SYS</text>"
+  parts[#parts + 1] = "<text x=\"160\" y=\"19\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"middle\">" ..
+    state.stageName .. "</text>"
+  parts[#parts + 1] = "<text x=\"313\" y=\"19\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"10\" text-anchor=\"end\">SCORE " ..
+    scoreText .. "</text>"
+
+  if state.stagePhase == "WAVE" and not state.gameOver then
+    local progress = math.min(state.stageScore, profile.ScoreThreshold)
+    parts[#parts + 1] = "<text x=\"160\" y=\"44\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"9\" text-anchor=\"middle\">" ..
+      tostring(progress) .. " / " .. tostring(profile.ScoreThreshold) .. "</text>"
+  elseif state.stagePhase == "BOSS" and state.boss.active then
+    local hpWidth = math.floor(120 * state.boss.hp / state.boss.maxHp)
+    parts[#parts + 1] = "<text x=\"160\" y=\"44\" fill=\"#ff9bd5\" font-family=\"monospace\" font-size=\"9\" text-anchor=\"middle\">" ..
+      state.boss.label .. "</text>"
+    parts[#parts + 1] = "<rect x=\"100\" y=\"50\" width=\"120\" height=\"7\" fill=\"#33142a\" stroke=\"#d7f7ff\"/>"
+    parts[#parts + 1] = "<rect x=\"100\" y=\"50\" width=\"" ..
+      tostring(hpWidth) .. "\" height=\"7\" fill=\"#ff3d9b\"/>"
+  end
+end
+
+local function AppendCenteredOverlay(parts, title, score, prompt)
+  parts[#parts + 1] = "<rect x=\"36\" y=\"184\" width=\"248\" height=\"116\" fill=\"#07101f\" stroke=\"#ff5c9d\"/>"
+  parts[#parts + 1] = "<text x=\"160\" y=\"218\" fill=\"#ff5c9d\" font-family=\"monospace\" font-size=\"18\" text-anchor=\"middle\">" ..
+    title .. "</text>"
+  parts[#parts + 1] = "<text x=\"160\" y=\"250\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"11\" text-anchor=\"middle\">FINAL SCORE " ..
+    string.format("%06d", score) .. "</text>"
+  parts[#parts + 1] = "<text x=\"160\" y=\"278\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"9\" text-anchor=\"middle\">" ..
+    prompt .. "</text>"
+end
+
 local function BuildGameSvg(state)
   local parts = { GAME_SVG_PREFIX }
-
-  AppendBackground(parts, state)
 
   for index = 1, GAME_CONFIG.MaxEnemies do
     local enemy = state.enemies[index]
     if enemy.active then
-      AppendEnemy(parts, enemy)
+      AppendEnemy(parts, state, enemy)
     end
   end
 
-  for index = 1, #state.enemyBullets do
+  if state.boss.active then
+    AppendBoss(parts, state.boss)
+  end
+
+  for index = 1, GAME_CONFIG.MaxEnemyBullets do
     local bullet = state.enemyBullets[index]
     if bullet.active then
       AppendEnemyBullet(parts, bullet)
@@ -65,22 +131,20 @@ local function BuildGameSvg(state)
 
   for index = 1, GAME_CONFIG.MaxExplosions do
     local explosion = state.explosions[index]
-    if explosion.active then
+    if explosion.active and explosion.delayTicks <= 0 then
       AppendExplosion(parts, explosion)
     end
   end
 
-  parts[#parts + 1] = "<rect x=\"0\" y=\"0\" width=\"320\" height=\"30\" fill=\"#07101f\"/>"
-  parts[#parts + 1] = "<text x=\"8\" y=\"20\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"12\">SCORE " ..
-    tostring(state.score) .. "</text>"
-  parts[#parts + 1] = "<text x=\"312\" y=\"20\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"end\">f5Rocket</text>"
+  AppendHud(parts, state)
 
   if state.gameOver then
-    parts[#parts + 1] = "<rect x=\"48\" y=\"190\" width=\"224\" height=\"104\" fill=\"#07101f\" stroke=\"#ff5c68\"/>"
-    parts[#parts + 1] = "<text x=\"160\" y=\"220\" fill=\"#ff5c68\" font-family=\"monospace\" font-size=\"20\" text-anchor=\"middle\">GAME OVER</text>"
-    parts[#parts + 1] = "<text x=\"160\" y=\"248\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">SCORE " ..
-      tostring(state.score) .. "</text>"
-    parts[#parts + 1] = "<text x=\"160\" y=\"274\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"9\" text-anchor=\"middle\">TOGGLE RUN TO RESTART</text>"
+    AppendCenteredOverlay(parts, "GAME OVER", state.score, "TOGGLE RUN TO RESTART")
+  elseif state.gameClear then
+    AppendCenteredOverlay(parts, "MISSION COMPLETE", state.score, "TOGGLE RUN TO RESTART")
+  elseif state.stagePhase == "CLEAR" then
+    parts[#parts + 1] = "<rect x=\"60\" y=\"205\" width=\"200\" height=\"62\" fill=\"#07101f\" stroke=\"#46e6e1\"/>"
+    parts[#parts + 1] = "<text x=\"160\" y=\"244\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"18\" text-anchor=\"middle\">STAGE CLEAR</text>"
   elseif not state.running then
     parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"14\" text-anchor=\"middle\">ENABLE RUN</text>"
   end

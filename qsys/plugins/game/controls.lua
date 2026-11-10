@@ -1,4 +1,12 @@
 table.insert(controls, {
+  Name = "BackgroundViewport",
+  ControlType = "Button",
+  ButtonType = "Momentary",
+  DefaultValue = false,
+  Count = 1
+})
+
+table.insert(controls, {
   Name = "Viewport",
   ControlType = "Button",
   ButtonType = "Momentary",

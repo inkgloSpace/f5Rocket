@@ -90,21 +90,32 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.3.0`
+- Version: `0.4.0`
 - Page: `Game`
-- Logical viewport: 320×480
+- Logical viewport: 320×480; Q-SYS display size: 480×720
 - Fixed update/render target: 30 Hz
 
-The current slice keeps the proven Toggle Run lifecycle and adds deterministic arcade combat: simultaneous player movement, player bullets, horizontally steering enemies, staggered aimed enemy bullets, AABB collisions, three-frame explosions, one-hit player death, and GAME OVER. It intentionally omits Pause during runtime stabilization, along with lives, respawn, bosses, power-ups, sound, menus, levels, and progression.
+The current slice keeps the proven Toggle Run lifecycle and implements a three-stage campaign: Easy near orbit, Medium AV-tech asteroid space, and the Hard Q-Core arena. Each wave has a stage-local score threshold, a deterministic boss, a 45-tick clear transition, and a static stage background. The campaign ends with MISSION COMPLETE at a minimum cumulative score of 52,500. One-hit death and Run OFF/ON restart semantics remain unchanged.
 
-Production controls are `Viewport`, `Run`, `Left`, `Right`, `Up`, `Down`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. `Run` is a Toggle; movement and fire remain Momentary controls read directly during each timer tick.
+Production controls are `BackgroundViewport`, `Viewport`, `Run`, `Left`, `Right`, `Up`, `Down`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. The two viewport controls overlap at 480×720 while both SVGs retain `viewBox="0 0 320 480"`. `BackgroundViewport` is the lower static layer; `Viewport` is the transparent 30 Hz gameplay layer. `Run` is a Toggle; movement and fire remain Momentary controls read directly during each timer tick.
+
+Campaign tuning is centralized and deterministic:
+
+| Stage | Enemies | Wave threshold | Enemy score | Boss HP | Boss reward |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Easy | 4 | 5,000 | 100 | 20 | 2,500 |
+| Medium | 5 | 10,000 | 200 | 40 | 5,000 |
+| Hard | 6 | 15,000 | 300 | 80 | 15,000 |
+
+The Easy boss uses single aimed shots. The Medium boss uses a three-shot fan with an occasional aimed shot. The Final boss uses a three-shot fan above half HP and switches to a faster five-shot fan pattern at or below half HP. All bullets reuse the same 32-entry enemy pool; all defeat effects reuse the 12-entry explosion pool.
 
 The production lifecycle now directly follows the proven probes:
 
 - Enabling `Run` stops the timer, resets game state and enemies, renders one initial frame, reports `RUNNING`, and starts the single timer at 30 Hz.
 - Disabling `Run` stops the timer, sets `gameState.running` false, and reports `STOPPED`.
-- Each timer tick reads input, updates the existing game state, renders and assigns one frame, then updates visible telemetry only when the approximately one-second measurement window closes.
-- No production diagnostic mode, Pause control, stage machine, or whole-tick `pcall` remains. Those diagnostics belong to the separate runtime probe.
+- Each timer tick reads input, updates the existing game state, renders and assigns one transparent gameplay frame, then updates visible telemetry only when the approximately one-second measurement window closes.
+- The background Legend is encoded and assigned only at initialization, new-game reset, and stage transition. It is never touched by the timer hot path.
+- No production diagnostic mode, Pause control, whole-tick `pcall`, or additional timer exists. Those diagnostics belong to the separate runtime probe.
 
 ## Shared PNG asset pipeline
 
@@ -113,41 +124,38 @@ The browser and Q-SYS game share only the root artwork files:
 ```text
 assets/player/
 assets/enemy/
+assets/boss/
 assets/bullet/
 assets/explosion/
 assets/background/
-assets/hud/
+assets/branding/
 ```
 
 The game build reads the expected PNGs from those folders and generates `plugins/game/generated/assets_data.lua`. Handwritten [`plugins/game/renderer/assets.lua`](plugins/game/renderer/assets.lua) owns XML-safe IDs, logical display dimensions, availability checks, cached `<defs>` construction, player-direction fallback rules, and the explicit runtime-definition allowlist.
 
-Generation and 30 Hz embedding are separate concerns: all manifest PNGs remain available in generated Lua data. The current dynamic game SVG embeds `player_idle`, `player_left`, `player_right`, `enemy_01`, `bullet_player`, `bullet_enemy`, and `explosion_01` through `explosion_03`. `background_tile` remains generated but is deliberately excluded from the dynamic definition set.
+Generation and 30 Hz embedding are separate concerns. Generated data exposes dynamic-gameplay, static-background, branding, and compatibility-alias groups. The dynamic definitions contain the three player states, three stage enemies, both bullets, three explosion frames, two minibosses, and the final boss. The three full-screen backgrounds are available only to the static background builder. `enemy_01` and `background_tile` remain compatibility aliases and do not drive the campaign.
 
-Enemy aircraft reuse one `enemy_facing_down` SVG definition, which references `enemy_01` through a centralized 180-degree transform. Active enemy instances reference that wrapper rather than repeating rotation markup.
+Each enemy and boss sprite has one reusable downward-facing wrapper definition with a centralized 180-degree transform. Hostile instances select those wrappers and never repeat rotation markup.
 
-Missing PNGs are expected and do not fail the build. Generated entries remain unavailable, Q-SYS debug output lists them, and the renderer uses obvious SVG geometry plus a deterministic starfield. These fallbacks are cached once in `<defs>` and placed with `<use href>` just like PNG-backed sprites; their geometry is not expanded per object or recalculated per frame. Invalid files at an expected PNG path do fail the build.
+Missing PNGs do not fail the build. Dynamic sprites fall back to cached SVG definitions; missing stage backgrounds use a deterministic static fallback generated only when that background is assigned. Invalid files at an expected PNG path do fail the build.
 
 ## Production renderer
 
 Every frame follows one fixed path:
 
 ```text
-game state
-→ allowlisted gameplay PNG definitions in <defs>
-→ sprite <use href="#assetId"> or <use href="#fallbackId"> instances
-→ one complete 320×480 SVG string
-→ one Crypto.Base64Encode(svg)
-→ one rapidjson Button Legend
-→ one Controls.Viewport.Legend assignment
+stage change → one background SVG/image → BackgroundViewport.IconData
+
+game state → allowlisted gameplay PNG definitions in <defs>
+→ sprite <use href="#assetId"> or fallback instances
+→ one transparent 320×480 gameplay SVG
+→ one Crypto.Base64Encode(svg) per frame
+→ one Controls.Viewport.Legend assignment per frame
 ```
 
-The selected PNG definitions, fallback definitions, and deterministic 320×480 starfield tile are prepared once. The scrolling background always places two lightweight fallback tile instances and changes only their integer translations. The current full-screen background PNG is never copied into the 30 Hz SVG. Runtime performs no filesystem access, network access, or PNG encoding.
+The selected gameplay PNG and fallback definitions are prepared once. No stage background data URI, opaque full-screen rectangle, or starfield is present in the dynamic SVG. The static background SVG contains exactly one phase background and is only rebuilt at lifecycle boundaries. Runtime performs no filesystem access, network access, or PNG encoding.
 
-Project engineering targets are below 32 KB raw SVG and below 48 KB after SVG Base64 encoding. These are not official Q-SYS limits. A centralized 64 KB raw-frame guard rejects an oversized SVG before Base64 encoding or `Viewport.Legend` assignment and reports `ERROR @ PAYLOAD` instead of sending it to Designer. Start-up debug output records gameplay definition bytes, deferred background definition bytes, current SVG bytes, Base64 bytes, and the guard value.
-
-## Future background artwork
-
-The eventual runtime background should use small repeating ocean tiles—ideally 32×32 or 64×64—plus small island and cloud sprites. Each asset should appear once in `<defs>`, repeat through `<use href>`, and scroll with integer coordinates or transforms. A large 320×480 PNG may remain a visual reference, but it should not be embedded again inside every dynamic 30 Hz frame.
+The current pack produces representative dynamic frames around 40 KB raw and 53 KB after SVG Base64 encoding. These are project observations, not official Q-SYS limits. A centralized 64 KB raw-frame guard rejects an oversized gameplay SVG before Base64 encoding or `Viewport.Legend` assignment. Static background payloads are reported separately when assigned and are not subject to the dynamic guard.
 
 ## Game modules
 
@@ -155,12 +163,14 @@ The eventual runtime background should use small repeating ocean tiles—ideally
 - `game/state.lua`: state creation/reset and bounded table allocation
 - `game/player.lua`: integer movement, viewport constraints, direction, and cooldown
 - `game/bullets.lua`: bounded player/enemy bullet allocation, fixed-vector enemy aiming, motion, and recycling
-- `game/enemies.lua`: deterministic placement, gentle pursuit steering, staggered fire cooldowns, recycling, and count
+- `game/stages.lua`: campaign phase transitions, thresholds, score reset, and bounded-pool cleanup
+- `game/enemies.lua`: profile-driven placement, pursuit steering, staggered fire cooldowns, recycling, and count
 - `game/explosions.lua`: bounded three-frame animation allocation and game-over animation timing
-- `game/collision.lua`: bullet/enemy, enemy-bullet/player, and enemy/player AABB collision with death/scoring rules
+- `game/bosses.lua`: preallocated boss state, deterministic movement/fire patterns, rewards, and multi-explosion defeat
+- `game/collision.lua`: normal/boss/player AABB collision and campaign scoring rules
 - `renderer/assets.lua`: shared artwork metadata, cached definitions, and asset selection
-- `renderer/svg.lua`: complete background-to-HUD frame serialization
-- `runtime.lua`: proven Toggle lifecycle, one Timer callback, state orchestration, centralized IconData, and one-second telemetry
+- `renderer/svg.lua`: static background serialization plus transparent gameplay/HUD frame serialization
+- `runtime.lua`: proven Toggle lifecycle, one Timer callback, stage orchestration, two centralized Legends, and one-second telemetry
 
 ## Installation and validation
 

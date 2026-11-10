@@ -32,6 +32,7 @@ local function KillPlayer(state)
 end
 
 local function CheckPlayerBulletEnemyCollisions(state)
+  local profile = GetStageProfile(state)
   for bulletIndex = 1, GAME_CONFIG.MaxPlayerBullets do
     local bullet = state.playerBullets[bulletIndex]
     if bullet.active then
@@ -42,10 +43,31 @@ local function CheckPlayerBulletEnemyCollisions(state)
           local explosionY = ExplosionYForObject(enemy)
           bullet.active = false
           SpawnExplosion(state, explosionX, explosionY)
-          RecycleEnemy(enemy)
-          state.score = state.score + GAME_CONFIG.EnemyScore
+          RecycleEnemy(state, enemy)
+          state.score = state.score + profile.EnemyScore
+          state.stageScore = state.stageScore + profile.EnemyScore
           break
         end
+      end
+    end
+  end
+end
+
+local function CheckPlayerBulletBossCollisions(state)
+  local boss = state.boss
+  if not boss.active then
+    return
+  end
+
+  for bulletIndex = 1, GAME_CONFIG.MaxPlayerBullets do
+    local bullet = state.playerBullets[bulletIndex]
+    if bullet.active and BoxesOverlap(bullet, boss) then
+      bullet.active = false
+      boss.hp = boss.hp - 1
+      if boss.hp <= 0 then
+        boss.hp = 0
+        DefeatBoss(state)
+        return
       end
     end
   end
@@ -79,9 +101,19 @@ local function CheckEnemyPlayerCollisions(state)
 
       if KillPlayer(state) then
         SpawnExplosion(state, explosionX, explosionY)
-        RecycleEnemy(enemy)
+        RecycleEnemy(state, enemy)
       end
       return
     end
+  end
+end
+
+local function CheckBossPlayerCollision(state)
+  if not state.player.alive or not state.boss.active then
+    return
+  end
+
+  if BoxesOverlap(state.boss, state.player) then
+    KillPlayer(state)
   end
 end

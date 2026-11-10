@@ -1,6 +1,6 @@
 # f5Rocket
 
-f5Rocket is a semi-8-bit vertical arcade airplane shooter with a local browser simulator and a separate modular Q-SYS production plugin. The browser remains the fast visual-iteration environment; the Q-SYS plugin now contains the first bounded playable Lua slice.
+f5Rocket is a semi-8-bit vertical arcade rocketship shooter with a local browser simulator and a separate modular Q-SYS production plugin. The browser remains the fast visual-iteration environment; the Q-SYS plugin contains a bounded three-stage space campaign.
 
 This is deliberately a **Q-SYS rendering and gameplay simulator**, not the start of a conventional web-game stack. It uses plain HTML, CSS, vanilla JavaScript modules, and one generated SVG scene. There is no framework, Canvas renderer, WebGL, npm dependency, or build step.
 
@@ -59,7 +59,7 @@ PNG file
 
 The SVG renderer only consumes state and the immutable asset catalog; it does not calculate gameplay or re-read/re-encode PNG files. Scene order is background, decoration, enemies, enemy bullets, player bullets, player, explosions, then HUD. Sprite positions are rounded to integer logical pixels, and the browser scales the fixed SVG with pixelated image rendering.
 
-The generated SVG is self-contained when PNGs are present. The production Q-SYS flow uses Lua, allowlists only active gameplay PNGs for SVG `<defs>`, caches geometric fallbacks, emits every sprite and scrolling starfield tile with `<use href="#...">`, Base64-encodes the complete SVG once, rapidjson-encodes the Button legend payload, and assigns it through dynamic `IconData`. Large or feature-deferred PNGs may remain in generated asset data without being copied into every 30 Hz frame.
+The generated SVG is self-contained when PNGs are present. The production Q-SYS flow uses two aligned Button controls: a low-frequency static stage background and a transparent 30 Hz gameplay overlay. Lua allowlists active gameplay PNGs for SVG `<defs>`, caches geometric fallbacks, emits sprites with `<use href="#...">`, Base64-encodes the overlay once per frame, and assigns it through dynamic `IconData`. Full-screen background data never enters the timer hot path.
 
 Telemetry reports raw UTF-8 SVG bytes, the mathematically correct Base64 SVG length (`4 × ceil(raw bytes / 3)`), unique cached PNG data-URI bytes, active objects, and average browser SVG generation time. Raw SVG size already includes every embedded PNG data URI used by the scene; the separate asset metric counts each configured cached asset once.
 
@@ -67,22 +67,30 @@ Telemetry reports raw UTF-8 SVG bytes, the mathematically correct Base64 SVG len
 
 ## PNG asset conventions
 
-Artwork is intentionally not bundled. Add user-supplied PNGs at these paths:
+The shared artwork pack uses these paths:
 
 ```text
 assets/player/player_idle.png
 assets/player/player_left.png
 assets/player/player_right.png
-assets/enemy/enemy_01.png
+assets/enemy/enemy_easy.png
+assets/enemy/enemy_medium.png
+assets/enemy/enemy_hard.png
+assets/boss/mini_boss_easy.png
+assets/boss/mini_boss_medium.png
+assets/boss/final_boss.png
 assets/bullet/player_bullet.png
 assets/bullet/enemy_bullet.png
 assets/explosion/explosion_01.png
 assets/explosion/explosion_02.png
 assets/explosion/explosion_03.png
-assets/background/background_tile.png
+assets/background/background_easy.png
+assets/background/background_medium.png
+assets/background/background_hard.png
+assets/branding/qsys_q_mark.png
 ```
 
-At browser startup, `src/assets.js` fetches every configured path once. For Q-SYS, `python3 qsys/tools/build.py game` validates the same root PNGs and deterministically generates Lua Base64 data before building the plugin. Missing files keep debug placeholders active in both environments. See [`assets/README.md`](assets/README.md) for sizing and replacement notes.
+`enemy_01.png` and `background_tile.png` remain compatibility aliases. For Q-SYS, `python3 qsys/tools/build.py game` validates every manifest PNG and deterministically generates grouped Lua Base64 data before building the plugin. Missing files keep debug placeholders active. See `asset_map.json` and `README_ASSETS.txt` for pack dimensions and intent.
 
 ## SVG inspection bridge
 
@@ -113,8 +121,8 @@ window.__f5Rocket.benchmarkStressLevels(120)
 ## Current limitations
 
 - The browser prototype still omits collision scoring; the Q-SYS production slice implements player-bullet/enemy AABB scoring independently.
-- The production slice has one steering enemy type, aimed enemy bullets, one-hit death, and GAME OVER, but no lives, respawn, bosses, power-ups, sound, levels, or progression.
-- The current PNG pack is temporary. Its large full-screen background remains available as a visual reference but is excluded from the Q-SYS 30 Hz frame in favor of the reusable starfield tile.
+- The production campaign has three enemy profiles, two minibosses, a final boss, one-hit death, and deterministic stage progression, but no lives, respawn, power-ups, sound, or menu system.
+- Full-screen stage backgrounds are assigned through a separate static Q-SYS viewport only at initialization, restart, or stage transition; they are deliberately excluded from the 30 Hz gameplay frame.
 - Q-SYS Designer validation does not establish physical Core CPU or final artwork payload limits.
 - Browser input is keyboard-only; Q-SYS input uses plugin controls.
 
@@ -122,6 +130,6 @@ window.__f5Rocket.benchmarkStressLevels(120)
 
 1. **Local technical prototype:** browser movement, fire pooling, scrolling background, generated SVG, placeholders, and telemetry.
 2. **Q-SYS compatibility probe:** completed in Designer 10.5.0; 64 `<use href>` instances remained stable at 30 Hz.
-3. **Production playable slice (current):** modular Lua movement, two-way fire, steering enemies, death/explosions, GAME OVER, generated SVG, and bounded pools.
-4. **Artwork integration:** iterate the user PNG pack, keep dynamic definitions allowlisted, and measure real payloads before enabling each asset group.
-5. **Core validation and gameplay growth:** verify physical Core limits before adding enemy weapons, patterns, explosions, lives, or progression.
+3. **Production campaign (current):** Easy/Medium/Hard waves, stage backgrounds, deterministic bosses, death/clear states, generated SVG, and bounded pools.
+4. **Designer tuning:** validate background layering, stage pacing, boss patterns, and artwork contrast in Q-SYS Designer.
+5. **Core validation and gameplay growth:** verify physical Core limits before adding lives, power-ups, sound, or further progression.

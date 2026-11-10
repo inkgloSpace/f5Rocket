@@ -18,7 +18,7 @@ local function FirePlayerBullet(state)
   return false
 end
 
-local function FireEnemyBullet(state, enemy)
+local function FireEnemyVectorBullet(state, startX, startY, vx, vy)
   if not state.player.alive then
     return false
   end
@@ -26,30 +26,40 @@ local function FireEnemyBullet(state, enemy)
   for index = 1, GAME_CONFIG.MaxEnemyBullets do
     local bullet = state.enemyBullets[index]
     if not bullet.active then
-      local startX = enemy.x + enemy.width / 2
-      local startY = enemy.y + enemy.height
-      local targetX = state.player.x + state.player.width / 2
-      local targetY = state.player.y + state.player.height / 2
-      local dx = targetX - startX
-      local dy = targetY - startY
-      local distance = math.sqrt(dx * dx + dy * dy)
-
-      if distance < 0.0001 then
-        dx = 0
-        dy = 1
-        distance = 1
-      end
-
       bullet.active = true
       bullet.x = startX - bullet.width / 2
       bullet.y = startY
-      bullet.vx = dx / distance * GAME_CONFIG.EnemyBulletSpeed
-      bullet.vy = dy / distance * GAME_CONFIG.EnemyBulletSpeed
+      bullet.vx = vx
+      bullet.vy = vy
       return true
     end
   end
 
   return false
+end
+
+local function FireEnemyAimedBullet(state, source, bulletSpeed)
+  local startX = source.x + source.width / 2
+  local startY = source.y + source.height
+  local targetX = state.player.x + state.player.width / 2
+  local targetY = state.player.y + state.player.height / 2
+  local dx = targetX - startX
+  local dy = targetY - startY
+  local distance = math.sqrt(dx * dx + dy * dy)
+
+  if distance < 0.0001 then
+    dx = 0
+    dy = 1
+    distance = 1
+  end
+
+  return FireEnemyVectorBullet(
+    state,
+    startX,
+    startY,
+    dx / distance * bulletSpeed,
+    dy / distance * bulletSpeed
+  )
 end
 
 local function UpdatePlayerBullets(state)

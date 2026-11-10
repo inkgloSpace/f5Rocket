@@ -1,0 +1,138 @@
+{
+  "logical_resolution": [
+    320,
+    480
+  ],
+  "recommended_display_size": [
+    480,
+    720
+  ],
+  "assets": {
+    "player_idle": {
+      "path": "assets/player/player_idle.png",
+      "size": [
+        40,
+        48
+      ]
+    },
+    "player_left": {
+      "path": "assets/player/player_left.png",
+      "size": [
+        40,
+        48
+      ]
+    },
+    "player_right": {
+      "path": "assets/player/player_right.png",
+      "size": [
+        40,
+        48
+      ]
+    },
+    "enemy_easy": {
+      "path": "assets/enemy/enemy_easy.png",
+      "size": [
+        34,
+        34
+      ]
+    },
+    "enemy_medium": {
+      "path": "assets/enemy/enemy_medium.png",
+      "size": [
+        34,
+        34
+      ]
+    },
+    "enemy_hard": {
+      "path": "assets/enemy/enemy_hard.png",
+      "size": [
+        34,
+        34
+      ]
+    },
+    "bullet_player": {
+      "path": "assets/bullet/player_bullet.png",
+      "size": [
+        10,
+        22
+      ]
+    },
+    "bullet_enemy": {
+      "path": "assets/bullet/enemy_bullet.png",
+      "size": [
+        10,
+        16
+      ]
+    },
+    "explosion_01": {
+      "path": "assets/explosion/explosion_01.png",
+      "size": [
+        44,
+        44
+      ]
+    },
+    "explosion_02": {
+      "path": "assets/explosion/explosion_02.png",
+      "size": [
+        44,
+        44
+      ]
+    },
+    "explosion_03": {
+      "path": "assets/explosion/explosion_03.png",
+      "size": [
+        44,
+        44
+      ]
+    },
+    "mini_boss_easy": {
+      "path": "assets/boss/mini_boss_easy.png",
+      "size": [
+        72,
+        56
+      ]
+    },
+    "mini_boss_medium": {
+      "path": "assets/boss/mini_boss_medium.png",
+      "size": [
+        88,
+        64
+      ]
+    },
+    "final_boss": {
+      "path": "assets/boss/final_boss.png",
+      "size": [
+        120,
+        80
+      ]
+    },
+    "background_easy": {
+      "path": "assets/background/background_easy.png",
+      "size": [
+        320,
+        480
+      ]
+    },
+    "background_medium": {
+      "path": "assets/background/background_medium.png",
+      "size": [
+        320,
+        480
+      ]
+    },
+    "background_hard": {
+      "path": "assets/background/background_hard.png",
+      "size": [
+        320,
+        480
+      ]
+    },
+    "qsys_q_mark": {
+      "path": "assets/branding/qsys_q_mark.png",
+      "size": [
+        64,
+        64
+      ]
+    }
+  }
+}

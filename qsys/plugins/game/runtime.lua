@@ -12,8 +12,25 @@ GameLegend = {
   IconData = ""
 }
 
+BackgroundLegend = {
+  DrawChrome = false,
+  IconData = ""
+}
+
 -- Keep the single timer globally scoped so Q-SYS Lua GC cannot remove it.
 GameTimer = Timer.New()
+
+local function AssignStageBackground(stageIndex)
+  local svg, assetId = BuildStageBackgroundSvg(stageIndex)
+  local encodedSvg = Crypto.Base64Encode(svg)
+  BackgroundLegend.IconData = encodedSvg
+  Controls.BackgroundViewport.Legend = rapidjson.encode(BackgroundLegend)
+  print(
+    "[f5Rocket] Background changed: " .. STAGE_PROFILES[stageIndex].Name ..
+    " / " .. assetId .. " / " .. tostring(#svg) .. " B raw / " ..
+    tostring(#encodedSvg) .. " B Base64"
+  )
+end
 
 local function RenderGameFrame()
   local svg = BuildGameSvg(gameState)
@@ -57,6 +74,16 @@ local function UpdateGameState()
     return
   end
 
+  if gameState.stagePhase == "CLEAR" then
+    UpdateExplosions(gameState)
+    local nextStage = AdvanceStageClear(gameState)
+    if nextStage ~= nil then
+      ResetEnemies(gameState)
+      AssignStageBackground(nextStage)
+    end
+    return
+  end
+
   UpdatePlayer(
     gameState,
     Controls.Left.Boolean,
@@ -70,24 +97,41 @@ local function UpdateGameState()
   end
 
   UpdatePlayerBullets(gameState)
-  UpdateEnemies(gameState)
-  UpdateEnemyFire(gameState)
+  if gameState.stagePhase == "WAVE" then
+    UpdateEnemies(gameState)
+    UpdateEnemyFire(gameState)
+  elseif gameState.stagePhase == "BOSS" then
+    UpdateBoss(gameState)
+  end
   UpdateEnemyBullets(gameState)
 
-  CheckPlayerBulletEnemyCollisions(gameState)
+  if gameState.stagePhase == "WAVE" then
+    CheckPlayerBulletEnemyCollisions(gameState)
+  elseif gameState.stagePhase == "BOSS" then
+    CheckPlayerBulletBossCollisions(gameState)
+  end
   CheckEnemyBulletPlayerCollisions(gameState)
-  CheckEnemyPlayerCollisions(gameState)
+  if gameState.stagePhase == "WAVE" then
+    CheckEnemyPlayerCollisions(gameState)
+  elseif gameState.stagePhase == "BOSS" then
+    CheckBossPlayerCollision(gameState)
+  end
 
   if gameState.gameOver then
     AdvanceGameOverAnimation(gameState)
     return
   end
 
-  UpdateExplosions(gameState)
 
-  gameState.backgroundOffset = (
-    gameState.backgroundOffset + GAME_CONFIG.BackgroundScrollPerTick
-  ) % GAME_CONFIG.LogicalHeight
+  if gameState.stagePhase == "WAVE" and StageThresholdReached(gameState) then
+    BeginBossPhase(gameState)
+    SpawnBoss(gameState)
+  elseif gameState.stagePhase == "CLEAR" then
+    UpdateExplosions(gameState)
+    return
+  end
+
+  UpdateExplosions(gameState)
   gameState.ticks = gameState.ticks + 1
   gameState.time = gameState.ticks * GAME_CONFIG.UpdateInterval
 end
@@ -95,9 +139,11 @@ end
 local function StartGame()
   GameTimer:Stop()
   ResetGameState(gameState)
+  EnterStage(gameState, 1)
   ResetEnemies(gameState)
   gameState.running = true
   ResetMeasurement()
+  AssignStageBackground(1)
   RenderGameFrame()
   UpdateSceneTelemetry()
   Controls.Status.String = "RUNNING"
@@ -136,10 +182,12 @@ Controls.Run.EventHandler = function(control)
 end
 
 ResetGameState(gameState)
+EnterStage(gameState, 1)
 ResetEnemies(gameState)
 GameTimer:Stop()
 Controls.Run.Boolean = false
 Controls.MeasuredHz.String = "0.0 Hz"
+AssignStageBackground(1)
 RenderGameFrame()
 UpdateSceneTelemetry()
 Controls.Status.String = "READY"

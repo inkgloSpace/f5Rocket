@@ -34,17 +34,47 @@ TARGETS = {
     },
 }
 
-ASSET_MANIFEST = (
+DYNAMIC_GAMEPLAY_ASSETS = (
     ("player_idle", "assets/player/player_idle.png"),
     ("player_left", "assets/player/player_left.png"),
     ("player_right", "assets/player/player_right.png"),
-    ("enemy_01", "assets/enemy/enemy_01.png"),
+    ("enemy_easy", "assets/enemy/enemy_easy.png"),
+    ("enemy_medium", "assets/enemy/enemy_medium.png"),
+    ("enemy_hard", "assets/enemy/enemy_hard.png"),
     ("bullet_player", "assets/bullet/player_bullet.png"),
     ("bullet_enemy", "assets/bullet/enemy_bullet.png"),
     ("explosion_01", "assets/explosion/explosion_01.png"),
     ("explosion_02", "assets/explosion/explosion_02.png"),
     ("explosion_03", "assets/explosion/explosion_03.png"),
+    ("mini_boss_easy", "assets/boss/mini_boss_easy.png"),
+    ("mini_boss_medium", "assets/boss/mini_boss_medium.png"),
+    ("final_boss", "assets/boss/final_boss.png"),
+)
+
+STATIC_BACKGROUND_ASSETS = (
+    ("background_easy", "assets/background/background_easy.png"),
+    ("background_medium", "assets/background/background_medium.png"),
+    ("background_hard", "assets/background/background_hard.png"),
+)
+
+BRANDING_ASSETS = (
+    ("qsys_q_mark", "assets/branding/qsys_q_mark.png"),
+)
+
+COMPATIBILITY_ALIAS_ASSETS = (
+    ("enemy_01", "assets/enemy/enemy_01.png"),
     ("background_tile", "assets/background/background_tile.png"),
+)
+
+ASSET_GROUPS = (
+    ("DYNAMIC_GAMEPLAY_ASSET_IDS", DYNAMIC_GAMEPLAY_ASSETS),
+    ("STATIC_BACKGROUND_ASSET_IDS", STATIC_BACKGROUND_ASSETS),
+    ("BRANDING_ASSET_IDS", BRANDING_ASSETS),
+    ("COMPATIBILITY_ALIAS_ASSET_IDS", COMPATIBILITY_ALIAS_ASSETS),
+)
+
+ASSET_MANIFEST = tuple(
+    asset for _, group in ASSET_GROUPS for asset in group
 )
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -176,8 +206,14 @@ def generate_game_assets() -> None:
             ]
         )
 
-    lines.append("}\n")
-    output = "".join(lines).encode("utf-8")
+    lines.append("}\n\n")
+
+    for group_name, group in ASSET_GROUPS:
+        lines.append(f"local GENERATED_{group_name} = {{\n")
+        for asset_id, _ in group:
+            lines.append(f"  [{lua_string(asset_id)}] = true,\n")
+        lines.append("}\n\n")
+    output = ("".join(lines).rstrip() + "\n").encode("utf-8")
     GAME_GENERATED_ASSETS.parent.mkdir(parents=True, exist_ok=True)
     GAME_GENERATED_ASSETS.write_bytes(output)
 
