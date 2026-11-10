@@ -21,14 +21,29 @@ local GAME_CONFIG = {
 
   EnemyWidth = 28,
   EnemyHeight = 28,
-  EnemySpeed = 2,
+  EnemyVerticalSpeed = 2,
+  EnemySteerSpeed = 1,
   InitialEnemyCount = 4,
   EnemyScore = 100,
+  EnemyFireIntervalTicks = 60,
+  EnemyFireStaggerTicks = 16,
+  EnemyFireSafetyDistance = 72,
+  EnemyFireRetryTicks = 5,
+
+  EnemyBulletWidth = 6,
+  EnemyBulletHeight = 8,
+  EnemyBulletSpeed = 4,
+
+  ExplosionWidth = 32,
+  ExplosionHeight = 32,
+  ExplosionFrames = 3,
+  ExplosionFrameTicks = 3,
+  GameOverAnimationTicks = 9,
 
   BackgroundScrollPerTick = 1,
 
   MaxEnemies = 8,
   MaxPlayerBullets = 24,
-  MaxEnemyBullets = 0,
+  MaxEnemyBullets = 16,
   MaxExplosions = 8
 }

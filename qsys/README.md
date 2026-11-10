@@ -90,12 +90,12 @@ Interpretation:
 - Source: [`plugins/game/plugin.lua`](plugins/game/plugin.lua)
 - Distribution: [`dist/f5Rocket.qplug`](dist/f5Rocket.qplug)
 - Plugin ID: `fdb75e48-50b5-5b21-8104-5da52ab51f13`
-- Version: `0.2.0`
+- Version: `0.3.0`
 - Page: `Game`
 - Logical viewport: 320×480
 - Fixed update/render target: 30 Hz
 
-The first slice implements a Toggle Run lifecycle, simultaneous four-direction input, cooldown-limited fire, bounded player bullets, deterministic recycling enemies, bullet/enemy AABB collision, and score. It intentionally omits Pause during runtime stabilization, along with enemy bullets, bosses, power-ups, lives, sound, menus, and progression.
+The current slice keeps the proven Toggle Run lifecycle and adds deterministic arcade combat: simultaneous player movement, player bullets, horizontally steering enemies, staggered aimed enemy bullets, AABB collisions, three-frame explosions, one-hit player death, and GAME OVER. It intentionally omits Pause during runtime stabilization, along with lives, respawn, bosses, power-ups, sound, menus, levels, and progression.
 
 Production controls are `Viewport`, `Run`, `Left`, `Right`, `Up`, `Down`, `Fire`, `Status`, `MeasuredHz`, `SvgBytes`, `SvgBase64Bytes`, `ActiveEnemies`, and `ActivePlayerBullets`. `Run` is a Toggle; movement and fire remain Momentary controls read directly during each timer tick.
 
@@ -121,7 +121,9 @@ assets/hud/
 
 The game build reads the expected PNGs from those folders and generates `plugins/game/generated/assets_data.lua`. Handwritten [`plugins/game/renderer/assets.lua`](plugins/game/renderer/assets.lua) owns XML-safe IDs, logical display dimensions, availability checks, cached `<defs>` construction, player-direction fallback rules, and the explicit runtime-definition allowlist.
 
-Generation and 30 Hz embedding are separate concerns: all manifest PNGs remain available in generated Lua data, while the current dynamic game SVG embeds only `player_idle`, `player_left`, `player_right`, `enemy_01`, and `bullet_player`. Enemy bullets and explosions are deferred until those features are active. `background_tile` remains generated but is deliberately excluded from the dynamic definition set.
+Generation and 30 Hz embedding are separate concerns: all manifest PNGs remain available in generated Lua data. The current dynamic game SVG embeds `player_idle`, `player_left`, `player_right`, `enemy_01`, `bullet_player`, `bullet_enemy`, and `explosion_01` through `explosion_03`. `background_tile` remains generated but is deliberately excluded from the dynamic definition set.
+
+Enemy aircraft reuse one `enemy_facing_down` SVG definition, which references `enemy_01` through a centralized 180-degree transform. Active enemy instances reference that wrapper rather than repeating rotation markup.
 
 Missing PNGs are expected and do not fail the build. Generated entries remain unavailable, Q-SYS debug output lists them, and the renderer uses obvious SVG geometry plus a deterministic starfield. These fallbacks are cached once in `<defs>` and placed with `<use href>` just like PNG-backed sprites; their geometry is not expanded per object or recalculated per frame. Invalid files at an expected PNG path do fail the build.
 
@@ -152,9 +154,10 @@ The eventual runtime background should use small repeating ocean tiles—ideally
 - `game/config.lua`: resolution, 30 Hz interval, movement, projectile, scoring, and pool limits
 - `game/state.lua`: state creation/reset and bounded table allocation
 - `game/player.lua`: integer movement, viewport constraints, direction, and cooldown
-- `game/bullets.lua`: player-bullet allocation, motion, recycling, and count
-- `game/enemies.lua`: deterministic initial placement, downward motion, recycling, and count
-- `game/collision.lua`: player-bullet versus enemy AABB checks and scoring
+- `game/bullets.lua`: bounded player/enemy bullet allocation, fixed-vector enemy aiming, motion, and recycling
+- `game/enemies.lua`: deterministic placement, gentle pursuit steering, staggered fire cooldowns, recycling, and count
+- `game/explosions.lua`: bounded three-frame animation allocation and game-over animation timing
+- `game/collision.lua`: bullet/enemy, enemy-bullet/player, and enemy/player AABB collision with death/scoring rules
 - `renderer/assets.lua`: shared artwork metadata, cached definitions, and asset selection
 - `renderer/svg.lua`: complete background-to-HUD frame serialization
 - `runtime.lua`: proven Toggle lifecycle, one Timer callback, state orchestration, centralized IconData, and one-second telemetry

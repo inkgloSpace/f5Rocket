@@ -10,6 +10,10 @@ end
 
 local function UpdatePlayer(state, leftPressed, rightPressed, upPressed, downPressed)
   local player = state.player
+  if not player.alive then
+    return
+  end
+
   local horizontal = 0
   local vertical = 0
 

@@ -49,6 +49,7 @@ if Controls then
   --[[ #include "game/player.lua" ]]
   --[[ #include "game/bullets.lua" ]]
   --[[ #include "game/enemies.lua" ]]
+  --[[ #include "game/explosions.lua" ]]
   --[[ #include "game/collision.lua" ]]
   --[[ #include "renderer/svg.lua" ]]
   --[[ #include "runtime.lua" ]]

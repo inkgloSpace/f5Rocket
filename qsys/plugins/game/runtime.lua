@@ -52,6 +52,11 @@ local function UpdateGameState()
     return
   end
 
+  if gameState.gameOver then
+    AdvanceGameOverAnimation(gameState)
+    return
+  end
+
   UpdatePlayer(
     gameState,
     Controls.Left.Boolean,
@@ -66,7 +71,19 @@ local function UpdateGameState()
 
   UpdatePlayerBullets(gameState)
   UpdateEnemies(gameState)
+  UpdateEnemyFire(gameState)
+  UpdateEnemyBullets(gameState)
+
   CheckPlayerBulletEnemyCollisions(gameState)
+  CheckEnemyBulletPlayerCollisions(gameState)
+  CheckEnemyPlayerCollisions(gameState)
+
+  if gameState.gameOver then
+    AdvanceGameOverAnimation(gameState)
+    return
+  end
+
+  UpdateExplosions(gameState)
 
   gameState.backgroundOffset = (
     gameState.backgroundOffset + GAME_CONFIG.BackgroundScrollPerTick

@@ -113,7 +113,7 @@ window.__f5Rocket.benchmarkStressLevels(120)
 ## Current limitations
 
 - The browser prototype still omits collision scoring; the Q-SYS production slice implements player-bullet/enemy AABB scoring independently.
-- The production slice has one recycling enemy type and no enemy weapons, lives, bosses, power-ups, sound, or progression.
+- The production slice has one steering enemy type, aimed enemy bullets, one-hit death, and GAME OVER, but no lives, respawn, bosses, power-ups, sound, levels, or progression.
 - The current PNG pack is temporary. Its large full-screen background remains available as a visual reference but is excluded from the Q-SYS 30 Hz frame in favor of the reusable starfield tile.
 - Q-SYS Designer validation does not establish physical Core CPU or final artwork payload limits.
 - Browser input is keyboard-only; Q-SYS input uses plugin controls.
@@ -122,6 +122,6 @@ window.__f5Rocket.benchmarkStressLevels(120)
 
 1. **Local technical prototype:** browser movement, fire pooling, scrolling background, generated SVG, placeholders, and telemetry.
 2. **Q-SYS compatibility probe:** completed in Designer 10.5.0; 64 `<use href>` instances remained stable at 30 Hz.
-3. **Production playable slice (current):** modular Lua movement, bullets, one enemy type, AABB collision, score, generated SVG, and bounded pools.
+3. **Production playable slice (current):** modular Lua movement, two-way fire, steering enemies, death/explosions, GAME OVER, generated SVG, and bounded pools.
 4. **Artwork integration:** iterate the user PNG pack, keep dynamic definitions allowlisted, and measure real payloads before enabling each asset group.
 5. **Core validation and gameplay growth:** verify physical Core limits before adding enemy weapons, patterns, explosions, lives, or progression.

@@ -5,6 +5,32 @@ local function BoxesOverlap(first, second)
     first.y + first.height > second.y
 end
 
+local function ExplosionXForObject(object)
+  return object.x + (object.width - GAME_CONFIG.ExplosionWidth) / 2
+end
+
+local function ExplosionYForObject(object)
+  return object.y + (object.height - GAME_CONFIG.ExplosionHeight) / 2
+end
+
+local function KillPlayer(state)
+  local player = state.player
+  if not player.alive then
+    return false
+  end
+
+  player.alive = false
+  SpawnExplosion(
+    state,
+    ExplosionXForObject(player),
+    ExplosionYForObject(player)
+  )
+  state.gameOver = true
+  state.gameOverTicks = 0
+  state.gameOverFrozen = false
+  return true
+end
+
 local function CheckPlayerBulletEnemyCollisions(state)
   for bulletIndex = 1, GAME_CONFIG.MaxPlayerBullets do
     local bullet = state.playerBullets[bulletIndex]
@@ -12,12 +38,50 @@ local function CheckPlayerBulletEnemyCollisions(state)
       for enemyIndex = 1, GAME_CONFIG.MaxEnemies do
         local enemy = state.enemies[enemyIndex]
         if enemy.active and BoxesOverlap(bullet, enemy) then
+          local explosionX = ExplosionXForObject(enemy)
+          local explosionY = ExplosionYForObject(enemy)
           bullet.active = false
+          SpawnExplosion(state, explosionX, explosionY)
           RecycleEnemy(enemy)
           state.score = state.score + GAME_CONFIG.EnemyScore
           break
         end
       end
+    end
+  end
+end
+
+local function CheckEnemyBulletPlayerCollisions(state)
+  if not state.player.alive then
+    return
+  end
+
+  for bulletIndex = 1, GAME_CONFIG.MaxEnemyBullets do
+    local bullet = state.enemyBullets[bulletIndex]
+    if bullet.active and BoxesOverlap(bullet, state.player) then
+      bullet.active = false
+      KillPlayer(state)
+      return
+    end
+  end
+end
+
+local function CheckEnemyPlayerCollisions(state)
+  if not state.player.alive then
+    return
+  end
+
+  for enemyIndex = 1, GAME_CONFIG.MaxEnemies do
+    local enemy = state.enemies[enemyIndex]
+    if enemy.active and BoxesOverlap(enemy, state.player) then
+      local explosionX = ExplosionXForObject(enemy)
+      local explosionY = ExplosionYForObject(enemy)
+
+      if KillPlayer(state) then
+        SpawnExplosion(state, explosionX, explosionY)
+        RecycleEnemy(enemy)
+      end
+      return
     end
   end
 end

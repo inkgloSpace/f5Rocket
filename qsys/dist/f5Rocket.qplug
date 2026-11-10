@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.2.0",
-  BuildVersion = "0.2.0.0",
+  Version = "0.3.0",
+  BuildVersion = "0.3.0.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -299,15 +299,30 @@ if Controls then
 
     EnemyWidth = 28,
     EnemyHeight = 28,
-    EnemySpeed = 2,
+    EnemyVerticalSpeed = 2,
+    EnemySteerSpeed = 1,
     InitialEnemyCount = 4,
     EnemyScore = 100,
+    EnemyFireIntervalTicks = 60,
+    EnemyFireStaggerTicks = 16,
+    EnemyFireSafetyDistance = 72,
+    EnemyFireRetryTicks = 5,
+
+    EnemyBulletWidth = 6,
+    EnemyBulletHeight = 8,
+    EnemyBulletSpeed = 4,
+
+    ExplosionWidth = 32,
+    ExplosionHeight = 32,
+    ExplosionFrames = 3,
+    ExplosionFrameTicks = 3,
+    GameOverAnimationTicks = 9,
 
     BackgroundScrollPerTick = 1,
 
     MaxEnemies = 8,
     MaxPlayerBullets = 24,
-    MaxEnemyBullets = 0,
+    MaxEnemyBullets = 16,
     MaxExplosions = 8
   }
   -- GENERATED FILE - DO NOT EDIT.
@@ -447,7 +462,11 @@ if Controls then
     player_left = true,
     player_right = true,
     enemy_01 = true,
-    bullet_player = true
+    bullet_player = true,
+    bullet_enemy = true,
+    explosion_01 = true,
+    explosion_02 = true,
+    explosion_03 = true
   }
 
   local LARGE_BACKGROUND_ASSET_IDS = {
@@ -505,14 +524,9 @@ if Controls then
     FALLBACK_PLAYER_DEFINITION,
     FALLBACK_ENEMY_DEFINITION,
     FALLBACK_PLAYER_BULLET_DEFINITION,
-    FALLBACK_STARFIELD_DEFINITION
-  })
-
-  -- Retained for the future enemy-bullet/explosion features, but intentionally
-  -- excluded from the current dynamic frame definition set.
-  local DEFERRED_FALLBACK_DEFINITIONS = table.concat({
     FALLBACK_ENEMY_BULLET_DEFINITION,
-    FALLBACK_EXPLOSION_DEFINITION
+    FALLBACK_EXPLOSION_DEFINITION,
+    FALLBACK_STARFIELD_DEFINITION
   })
 
   local ASSETS = {}
@@ -556,7 +570,15 @@ if Controls then
 
   local GAMEPLAY_ASSET_DEFINITIONS = table.concat(GAMEPLAY_ASSET_DEFINITION_PARTS)
   local LARGE_BACKGROUND_ASSET_DEFINITIONS = table.concat(LARGE_BACKGROUND_ASSET_DEFINITION_PARTS)
-  local STATIC_RENDER_DEFINITIONS = GAMEPLAY_ASSET_DEFINITIONS .. GAMEPLAY_FALLBACK_DEFINITIONS
+  local enemyFacingSourceId = "fallback_enemy"
+  if RUNTIME_DEFINITION_AVAILABLE["enemy_01"] then
+    enemyFacingSourceId = "enemy_01"
+  end
+  local ENEMY_FACING_DOWN_DEFINITION =
+    "<g id=\"enemy_facing_down\"><use href=\"#" .. enemyFacingSourceId ..
+    "\" transform=\"rotate(180 14 14)\"/></g>"
+  local STATIC_RENDER_DEFINITIONS = GAMEPLAY_ASSET_DEFINITIONS ..
+    GAMEPLAY_FALLBACK_DEFINITIONS .. ENEMY_FACING_DOWN_DEFINITION
 
   local function AssetAvailable(assetId)
     local asset = ASSETS[assetId]
@@ -617,6 +639,9 @@ if Controls then
   local function CreateGameState()
     local state = {
       running = false,
+      gameOver = false,
+      gameOverTicks = 0,
+      gameOverFrozen = false,
       score = 0,
       time = 0,
       ticks = 0,
@@ -636,7 +661,8 @@ if Controls then
         width = GAME_CONFIG.EnemyWidth,
         height = GAME_CONFIG.EnemyHeight,
         slot = index,
-        cycle = 0
+        cycle = 0,
+        fireCooldown = 0
       }
     end
 
@@ -650,13 +676,25 @@ if Controls then
       }
     end
 
+    for index = 1, GAME_CONFIG.MaxEnemyBullets do
+      state.enemyBullets[index] = {
+        active = false,
+        x = 0,
+        y = 0,
+        vx = 0,
+        vy = 0,
+        width = GAME_CONFIG.EnemyBulletWidth,
+        height = GAME_CONFIG.EnemyBulletHeight
+      }
+    end
+
     for index = 1, GAME_CONFIG.MaxExplosions do
       state.explosions[index] = {
         active = false,
         x = 0,
         y = 0,
         frame = 1,
-        ticksRemaining = 0
+        frameTicksRemaining = 0
       }
     end
 
@@ -665,6 +703,9 @@ if Controls then
 
   local function ResetGameState(state)
     state.running = false
+    state.gameOver = false
+    state.gameOverTicks = 0
+    state.gameOverFrozen = false
     state.score = 0
     state.time = 0
     state.ticks = 0
@@ -676,6 +717,7 @@ if Controls then
     state.player.height = GAME_CONFIG.PlayerHeight
     state.player.direction = "idle"
     state.player.fireCooldown = 0
+    state.player.alive = true
 
     for index = 1, GAME_CONFIG.MaxEnemies do
       local enemy = state.enemies[index]
@@ -683,6 +725,16 @@ if Controls then
       enemy.x = 0
       enemy.y = 0
       enemy.cycle = 0
+      enemy.fireCooldown = 0
+    end
+
+    for index = 1, GAME_CONFIG.MaxEnemyBullets do
+      local bullet = state.enemyBullets[index]
+      bullet.active = false
+      bullet.x = 0
+      bullet.y = 0
+      bullet.vx = 0
+      bullet.vy = 0
     end
 
     for index = 1, GAME_CONFIG.MaxPlayerBullets do
@@ -698,7 +750,7 @@ if Controls then
       explosion.x = 0
       explosion.y = 0
       explosion.frame = 1
-      explosion.ticksRemaining = 0
+      explosion.frameTicksRemaining = 0
     end
   end
   local function ClampInteger(value, minimum, maximum)
@@ -713,6 +765,10 @@ if Controls then
 
   local function UpdatePlayer(state, leftPressed, rightPressed, upPressed, downPressed)
     local player = state.player
+    if not player.alive then
+      return
+    end
+
     local horizontal = 0
     local vertical = 0
 
@@ -759,7 +815,7 @@ if Controls then
   end
   local function FirePlayerBullet(state)
     local player = state.player
-    if player.fireCooldown > 0 then
+    if not player.alive or player.fireCooldown > 0 then
       return false
     end
 
@@ -770,6 +826,40 @@ if Controls then
         bullet.x = math.floor(player.x + (player.width - bullet.width) / 2)
         bullet.y = player.y - bullet.height
         player.fireCooldown = GAME_CONFIG.FireIntervalTicks
+        return true
+      end
+    end
+
+    return false
+  end
+
+  local function FireEnemyBullet(state, enemy)
+    if not state.player.alive then
+      return false
+    end
+
+    for index = 1, GAME_CONFIG.MaxEnemyBullets do
+      local bullet = state.enemyBullets[index]
+      if not bullet.active then
+        local startX = enemy.x + enemy.width / 2
+        local startY = enemy.y + enemy.height
+        local targetX = state.player.x + state.player.width / 2
+        local targetY = state.player.y + state.player.height / 2
+        local dx = targetX - startX
+        local dy = targetY - startY
+        local distance = math.sqrt(dx * dx + dy * dy)
+
+        if distance < 0.0001 then
+          dx = 0
+          dy = 1
+          distance = 1
+        end
+
+        bullet.active = true
+        bullet.x = startX - bullet.width / 2
+        bullet.y = startY
+        bullet.vx = dx / distance * GAME_CONFIG.EnemyBulletSpeed
+        bullet.vy = dy / distance * GAME_CONFIG.EnemyBulletSpeed
         return true
       end
     end
@@ -789,6 +879,33 @@ if Controls then
     end
   end
 
+  local function UpdateEnemyBullets(state)
+    for index = 1, GAME_CONFIG.MaxEnemyBullets do
+      local bullet = state.enemyBullets[index]
+      if bullet.active then
+        bullet.x = bullet.x + bullet.vx
+        bullet.y = bullet.y + bullet.vy
+
+        if bullet.x < -bullet.width or
+            bullet.x > GAME_CONFIG.LogicalWidth or
+            bullet.y < -bullet.height or
+            bullet.y > GAME_CONFIG.LogicalHeight then
+          bullet.active = false
+        end
+      end
+    end
+  end
+
+  local function CountActiveEnemyBullets(state)
+    local count = 0
+    for index = 1, GAME_CONFIG.MaxEnemyBullets do
+      if state.enemyBullets[index].active then
+        count = count + 1
+      end
+    end
+    return count
+  end
+
   local function CountActivePlayerBullets(state)
     local count = 0
     for index = 1, GAME_CONFIG.MaxPlayerBullets do
@@ -798,11 +915,24 @@ if Controls then
     end
     return count
   end
+  local function EnemyFireDelay(enemy, initialSpawn)
+    if initialSpawn then
+      return math.floor(GAME_CONFIG.EnemyFireIntervalTicks / 3) +
+        (enemy.slot - 1) * 12
+    end
+
+    local stagger = (
+      enemy.slot * 7 + enemy.cycle * 11
+    ) % GAME_CONFIG.EnemyFireStaggerTicks
+    return GAME_CONFIG.EnemyFireIntervalTicks + stagger
+  end
+
   local function RecycleEnemy(enemy)
     enemy.cycle = enemy.cycle + 1
     local horizontalRange = GAME_CONFIG.LogicalWidth - enemy.width
     enemy.x = (enemy.slot * 53 + enemy.cycle * 29) % horizontalRange
     enemy.y = -enemy.height - ((enemy.slot * 37 + enemy.cycle * 11) % 160)
+    enemy.fireCooldown = EnemyFireDelay(enemy, false)
     enemy.active = true
   end
 
@@ -815,16 +945,56 @@ if Controls then
       enemy.cycle = 0
       enemy.x = ((index - 1) * 73 + 20) % horizontalRange
       enemy.y = 48 - (index - 1) * 96
+      enemy.fireCooldown = EnemyFireDelay(enemy, true)
     end
   end
 
   local function UpdateEnemies(state)
+    local playerCenterX = state.player.x + state.player.width / 2
+    local maximumX = GAME_CONFIG.LogicalWidth - GAME_CONFIG.EnemyWidth
+
     for index = 1, GAME_CONFIG.MaxEnemies do
       local enemy = state.enemies[index]
       if enemy.active then
-        enemy.y = enemy.y + GAME_CONFIG.EnemySpeed
+        local enemyCenterX = enemy.x + enemy.width / 2
+        local deltaX = playerCenterX - enemyCenterX
+
+        if deltaX > 0 then
+          enemy.x = enemy.x + math.min(deltaX, GAME_CONFIG.EnemySteerSpeed)
+        elseif deltaX < 0 then
+          enemy.x = enemy.x - math.min(-deltaX, GAME_CONFIG.EnemySteerSpeed)
+        end
+
+        enemy.x = math.max(0, math.min(maximumX, math.floor(enemy.x)))
+        enemy.y = enemy.y + GAME_CONFIG.EnemyVerticalSpeed
+
         if enemy.y > GAME_CONFIG.LogicalHeight then
           RecycleEnemy(enemy)
+        end
+      end
+    end
+  end
+
+  local function UpdateEnemyFire(state)
+    if not state.player.alive then
+      return
+    end
+
+    for index = 1, GAME_CONFIG.MaxEnemies do
+      local enemy = state.enemies[index]
+      if enemy.active then
+        if enemy.fireCooldown > 0 then
+          enemy.fireCooldown = enemy.fireCooldown - 1
+        end
+
+        if enemy.fireCooldown <= 0 and
+            enemy.y > 20 and
+            enemy.y < state.player.y - GAME_CONFIG.EnemyFireSafetyDistance then
+          if FireEnemyBullet(state, enemy) then
+            enemy.fireCooldown = EnemyFireDelay(enemy, false)
+          else
+            enemy.fireCooldown = GAME_CONFIG.EnemyFireRetryTicks
+          end
         end
       end
     end
@@ -839,11 +1009,92 @@ if Controls then
     end
     return count
   end
+  local function SpawnExplosion(state, x, y)
+    for index = 1, GAME_CONFIG.MaxExplosions do
+      local explosion = state.explosions[index]
+      if not explosion.active then
+        explosion.active = true
+        explosion.x = math.floor(x)
+        explosion.y = math.floor(y)
+        explosion.frame = 1
+        explosion.frameTicksRemaining = GAME_CONFIG.ExplosionFrameTicks
+        return true
+      end
+    end
+
+    return false
+  end
+
+  local function UpdateExplosions(state)
+    for index = 1, GAME_CONFIG.MaxExplosions do
+      local explosion = state.explosions[index]
+      if explosion.active then
+        explosion.frameTicksRemaining = explosion.frameTicksRemaining - 1
+
+        if explosion.frameTicksRemaining <= 0 then
+          explosion.frame = explosion.frame + 1
+          if explosion.frame > GAME_CONFIG.ExplosionFrames then
+            explosion.active = false
+          else
+            explosion.frameTicksRemaining = GAME_CONFIG.ExplosionFrameTicks
+          end
+        end
+      end
+    end
+  end
+
+  local function AdvanceGameOverAnimation(state)
+    if state.gameOverFrozen then
+      return
+    end
+
+    UpdateExplosions(state)
+    state.gameOverTicks = state.gameOverTicks + 1
+    if state.gameOverTicks >= GAME_CONFIG.GameOverAnimationTicks then
+      state.gameOverFrozen = true
+    end
+  end
+
+  local function CountActiveExplosions(state)
+    local count = 0
+    for index = 1, GAME_CONFIG.MaxExplosions do
+      if state.explosions[index].active then
+        count = count + 1
+      end
+    end
+    return count
+  end
   local function BoxesOverlap(first, second)
     return first.x < second.x + second.width and
       first.x + first.width > second.x and
       first.y < second.y + second.height and
       first.y + first.height > second.y
+  end
+
+  local function ExplosionXForObject(object)
+    return object.x + (object.width - GAME_CONFIG.ExplosionWidth) / 2
+  end
+
+  local function ExplosionYForObject(object)
+    return object.y + (object.height - GAME_CONFIG.ExplosionHeight) / 2
+  end
+
+  local function KillPlayer(state)
+    local player = state.player
+    if not player.alive then
+      return false
+    end
+
+    player.alive = false
+    SpawnExplosion(
+      state,
+      ExplosionXForObject(player),
+      ExplosionYForObject(player)
+    )
+    state.gameOver = true
+    state.gameOverTicks = 0
+    state.gameOverFrozen = false
+    return true
   end
 
   local function CheckPlayerBulletEnemyCollisions(state)
@@ -853,12 +1104,50 @@ if Controls then
         for enemyIndex = 1, GAME_CONFIG.MaxEnemies do
           local enemy = state.enemies[enemyIndex]
           if enemy.active and BoxesOverlap(bullet, enemy) then
+            local explosionX = ExplosionXForObject(enemy)
+            local explosionY = ExplosionYForObject(enemy)
             bullet.active = false
+            SpawnExplosion(state, explosionX, explosionY)
             RecycleEnemy(enemy)
             state.score = state.score + GAME_CONFIG.EnemyScore
             break
           end
         end
+      end
+    end
+  end
+
+  local function CheckEnemyBulletPlayerCollisions(state)
+    if not state.player.alive then
+      return
+    end
+
+    for bulletIndex = 1, GAME_CONFIG.MaxEnemyBullets do
+      local bullet = state.enemyBullets[bulletIndex]
+      if bullet.active and BoxesOverlap(bullet, state.player) then
+        bullet.active = false
+        KillPlayer(state)
+        return
+      end
+    end
+  end
+
+  local function CheckEnemyPlayerCollisions(state)
+    if not state.player.alive then
+      return
+    end
+
+    for enemyIndex = 1, GAME_CONFIG.MaxEnemies do
+      local enemy = state.enemies[enemyIndex]
+      if enemy.active and BoxesOverlap(enemy, state.player) then
+        local explosionX = ExplosionXForObject(enemy)
+        local explosionY = ExplosionYForObject(enemy)
+
+        if KillPlayer(state) then
+          SpawnExplosion(state, explosionX, explosionY)
+          RecycleEnemy(enemy)
+        end
+        return
       end
     end
   end
@@ -877,7 +1166,7 @@ if Controls then
   end
 
   local function AppendEnemy(parts, enemy)
-    AppendSpriteUse(parts, "enemy_01", "fallback_enemy", enemy.x, enemy.y)
+    AppendDefinitionUse(parts, "enemy_facing_down", enemy.x, enemy.y)
   end
 
   local function AppendPlayerBullet(parts, bullet)
@@ -923,7 +1212,9 @@ if Controls then
       end
     end
 
-    AppendPlayer(parts, state.player)
+    if state.player.alive then
+      AppendPlayer(parts, state.player)
+    end
 
     for index = 1, GAME_CONFIG.MaxExplosions do
       local explosion = state.explosions[index]
@@ -937,7 +1228,13 @@ if Controls then
       tostring(state.score) .. "</text>"
     parts[#parts + 1] = "<text x=\"312\" y=\"20\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"end\">f5Rocket</text>"
 
-    if not state.running then
+    if state.gameOver then
+      parts[#parts + 1] = "<rect x=\"48\" y=\"190\" width=\"224\" height=\"104\" fill=\"#07101f\" stroke=\"#ff5c68\"/>"
+      parts[#parts + 1] = "<text x=\"160\" y=\"220\" fill=\"#ff5c68\" font-family=\"monospace\" font-size=\"20\" text-anchor=\"middle\">GAME OVER</text>"
+      parts[#parts + 1] = "<text x=\"160\" y=\"248\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">SCORE " ..
+        tostring(state.score) .. "</text>"
+      parts[#parts + 1] = "<text x=\"160\" y=\"274\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"9\" text-anchor=\"middle\">TOGGLE RUN TO RESTART</text>"
+    elseif not state.running then
       parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"14\" text-anchor=\"middle\">ENABLE RUN</text>"
     end
 
@@ -998,6 +1295,11 @@ if Controls then
       return
     end
 
+    if gameState.gameOver then
+      AdvanceGameOverAnimation(gameState)
+      return
+    end
+
     UpdatePlayer(
       gameState,
       Controls.Left.Boolean,
@@ -1012,7 +1314,19 @@ if Controls then
 
     UpdatePlayerBullets(gameState)
     UpdateEnemies(gameState)
+    UpdateEnemyFire(gameState)
+    UpdateEnemyBullets(gameState)
+
     CheckPlayerBulletEnemyCollisions(gameState)
+    CheckEnemyBulletPlayerCollisions(gameState)
+    CheckEnemyPlayerCollisions(gameState)
+
+    if gameState.gameOver then
+      AdvanceGameOverAnimation(gameState)
+      return
+    end
+
+    UpdateExplosions(gameState)
 
     gameState.backgroundOffset = (
       gameState.backgroundOffset + GAME_CONFIG.BackgroundScrollPerTick

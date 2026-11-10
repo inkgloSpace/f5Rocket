@@ -19,7 +19,11 @@ local GAMEPLAY_ASSET_IDS = {
   player_left = true,
   player_right = true,
   enemy_01 = true,
-  bullet_player = true
+  bullet_player = true,
+  bullet_enemy = true,
+  explosion_01 = true,
+  explosion_02 = true,
+  explosion_03 = true
 }
 
 local LARGE_BACKGROUND_ASSET_IDS = {
@@ -77,14 +81,9 @@ local GAMEPLAY_FALLBACK_DEFINITIONS = table.concat({
   FALLBACK_PLAYER_DEFINITION,
   FALLBACK_ENEMY_DEFINITION,
   FALLBACK_PLAYER_BULLET_DEFINITION,
-  FALLBACK_STARFIELD_DEFINITION
-})
-
--- Retained for the future enemy-bullet/explosion features, but intentionally
--- excluded from the current dynamic frame definition set.
-local DEFERRED_FALLBACK_DEFINITIONS = table.concat({
   FALLBACK_ENEMY_BULLET_DEFINITION,
-  FALLBACK_EXPLOSION_DEFINITION
+  FALLBACK_EXPLOSION_DEFINITION,
+  FALLBACK_STARFIELD_DEFINITION
 })
 
 local ASSETS = {}
@@ -128,7 +127,15 @@ end
 
 local GAMEPLAY_ASSET_DEFINITIONS = table.concat(GAMEPLAY_ASSET_DEFINITION_PARTS)
 local LARGE_BACKGROUND_ASSET_DEFINITIONS = table.concat(LARGE_BACKGROUND_ASSET_DEFINITION_PARTS)
-local STATIC_RENDER_DEFINITIONS = GAMEPLAY_ASSET_DEFINITIONS .. GAMEPLAY_FALLBACK_DEFINITIONS
+local enemyFacingSourceId = "fallback_enemy"
+if RUNTIME_DEFINITION_AVAILABLE["enemy_01"] then
+  enemyFacingSourceId = "enemy_01"
+end
+local ENEMY_FACING_DOWN_DEFINITION =
+  "<g id=\"enemy_facing_down\"><use href=\"#" .. enemyFacingSourceId ..
+  "\" transform=\"rotate(180 14 14)\"/></g>"
+local STATIC_RENDER_DEFINITIONS = GAMEPLAY_ASSET_DEFINITIONS ..
+  GAMEPLAY_FALLBACK_DEFINITIONS .. ENEMY_FACING_DOWN_DEFINITION
 
 local function AssetAvailable(assetId)
   local asset = ASSETS[assetId]

@@ -13,7 +13,7 @@ local function AppendBackground(parts, state)
 end
 
 local function AppendEnemy(parts, enemy)
-  AppendSpriteUse(parts, "enemy_01", "fallback_enemy", enemy.x, enemy.y)
+  AppendDefinitionUse(parts, "enemy_facing_down", enemy.x, enemy.y)
 end
 
 local function AppendPlayerBullet(parts, bullet)
@@ -59,7 +59,9 @@ local function BuildGameSvg(state)
     end
   end
 
-  AppendPlayer(parts, state.player)
+  if state.player.alive then
+    AppendPlayer(parts, state.player)
+  end
 
   for index = 1, GAME_CONFIG.MaxExplosions do
     local explosion = state.explosions[index]
@@ -73,7 +75,13 @@ local function BuildGameSvg(state)
     tostring(state.score) .. "</text>"
   parts[#parts + 1] = "<text x=\"312\" y=\"20\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"end\">f5Rocket</text>"
 
-  if not state.running then
+  if state.gameOver then
+    parts[#parts + 1] = "<rect x=\"48\" y=\"190\" width=\"224\" height=\"104\" fill=\"#07101f\" stroke=\"#ff5c68\"/>"
+    parts[#parts + 1] = "<text x=\"160\" y=\"220\" fill=\"#ff5c68\" font-family=\"monospace\" font-size=\"20\" text-anchor=\"middle\">GAME OVER</text>"
+    parts[#parts + 1] = "<text x=\"160\" y=\"248\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"12\" text-anchor=\"middle\">SCORE " ..
+      tostring(state.score) .. "</text>"
+    parts[#parts + 1] = "<text x=\"160\" y=\"274\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"9\" text-anchor=\"middle\">TOGGLE RUN TO RESTART</text>"
+  elseif not state.running then
     parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"14\" text-anchor=\"middle\">ENABLE RUN</text>"
   end
 
