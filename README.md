@@ -81,17 +81,17 @@ For operation on a real Core, a standard USB HID keyboard can be connected direc
 qsys/control-scripts/f5Rocket_USB_Keyboard.lua
 ```
 
-This path does not use the Windows QRC bridge. The Control Script uses Q-SYS `UsbMonitor` / `Usb` HID input and writes directly to the f5Rocket component controls.
+This path does not use the Windows QRC bridge. The proven Control Script uses direct Lua `UsbMonitor` / `Usb.New()` HID input and writes to the f5Rocket component controls.
 
 Setup:
 
-1. Set the f5Rocket plugin component **Code Name** to `f5Rocket`.
-2. Enable **Script Access** for the f5Rocket component.
-3. Add a Q-SYS **Control Script** component to the schematic.
-4. Copy `qsys/control-scripts/f5Rocket_USB_Keyboard.lua` into that Control Script.
-5. Save the design to the Core and run it.
-6. Connect the USB HID keyboard to a Core USB-A host port.
-7. If the keyboard was already connected before the script started and is not detected, unplug/reconnect it once.
+1. Remove the Q-SYS **USB Input** component from the design.
+2. Set the f5Rocket plugin component **Code Name** to `f5Rocket`.
+3. Set f5Rocket **Script Access** to `All`.
+4. Add a Q-SYS **Control Script** component to the schematic.
+5. Paste/use `qsys/control-scripts/f5Rocket_USB_Keyboard.lua` in that Control Script.
+6. Run the design on the physical Core.
+7. Connect the keyboard to a Core USB-A host port.
 
 Core keyboard mapping:
 
@@ -101,15 +101,16 @@ S / Down Arrow     Down
 A / Left Arrow     Left
 D / Right Arrow    Right
 Space              Fire
-Enter / KP Enter   Run / Restart
+Enter / KP Enter   Run
+Esc                Stop
 P                  Pause toggle
 ```
 
-The script tracks press/release state per physical key and per USB device, so true simultaneous combinations such as `W + D + Space` remain active correctly. `Enter` only triggers on the initial key press and `P` toggles Pause only on the initial press; HID repeat events do not retrigger either action.
+The tested script intentionally uses raw numeric Linux/Q-SYS key codes rather than `Usb.Key.*` enum names. It tracks each USB event endpoint separately and maintains global key counts, so a keyboard exposing multiple event nodes still supports true simultaneous combinations such as `W + D + Space` without duplicate Enter or Pause actions.
 
-If a keyboard is removed while movement or Fire is held, the script releases the corresponding f5Rocket controls to prevent a latched input.
+Command keys run only on the global up-to-down transition, repeat/held events do not retrigger them, and unplugging the keyboard releases held movement and Fire state.
 
-For this project, do **not** add/use the Q-SYS `USB Input` component alongside this direct Lua HID controller. The f5Rocket design previously observed that `USB Input` interfered with direct `Usb.New()` keyboard handling. Use the standalone Lua HID path for the physical Core keyboard.
+For this project, the Q-SYS `USB Input` component must not be used alongside this direct Lua HID controller. Remove it and use the standalone Control Script path.
 
 Q-SYS does not guarantee compatibility with every USB HID peripheral, so use a conventional wired USB keyboard for the most predictable behavior.
 

@@ -105,12 +105,13 @@ This is a standalone Q-SYS Control Script and is not embedded into `f5Rocket.qpl
 
 Requirements:
 
-1. Set the f5Rocket plugin component **Code Name** to `f5Rocket`.
-2. Enable **Script Access** on the plugin component.
-3. Add a Q-SYS Control Script component to the schematic.
-4. Paste `f5Rocket_USB_Keyboard.lua` into the Control Script.
-5. Run the design on the Core.
-6. Connect a standard USB HID keyboard to a Core USB-A host port.
+1. Remove the Q-SYS `USB Input` component from the design.
+2. Set the f5Rocket plugin component **Code Name** to `f5Rocket`.
+3. Set f5Rocket **Script Access** to `All`.
+4. Add a Q-SYS Control Script component to the schematic.
+5. Paste/use `f5Rocket_USB_Keyboard.lua` in the Control Script.
+6. Run the design on the physical Core.
+7. Connect a standard USB HID keyboard to a Core USB-A host port.
 
 The script uses:
 
@@ -120,7 +121,35 @@ Usb.New(devnode)
 Component.New("f5Rocket")
 ```
 
-It filters USB input event devices, retains each `Usb` object globally, and tracks key state by USB device plus key code. This allows correct simultaneous input even when two physical keys map to the same action.
+The script enumerates the component controls with `pairs(game)`, stores them as `gameControls[string.lower(tostring(name))]`, and resolves all controls through `GetGameControl(name)`. This case-insensitive lookup is intentional and must not be replaced by direct component member access.
+
+The implementation uses raw numeric Linux/Q-SYS key codes to avoid dependency on potentially different `Usb.Key.*` enum names:
+
+```text
+ESC       1
+W        17
+P        25
+ENTER    28
+A        30
+S        31
+D        32
+SPACE    57
+KP_ENTER 96
+UP      103
+LEFT    105
+RIGHT   106
+DOWN    108
+```
+
+Only numeric Type `1` keyboard events are processed. Event values are interpreted as:
+
+```text
+0 = release
+1 = press
+2 = repeat / held
+```
+
+Repeat events return without changing state or generating duplicate command actions. `deviceKeyStates[devnode]` records each endpoint independently, while `globalKeyCounts[code]`, `IsKeyDown()`, `IncrementKey()`, and `DecrementKey()` combine them globally. `RefreshContinuousControls()` then preserves true simultaneous input such as `W + D + Space`.
 
 Keyboard mapping:
 
@@ -130,17 +159,16 @@ S / Down Arrow     Down
 A / Left Arrow     Left
 D / Right Arrow    Right
 Space              Fire
-Enter / KP Enter   Run / Restart
+Enter / KP Enter   Run
+Esc                Stop
 P                  Pause toggle
 ```
 
-Movement and Fire treat HID values 1 and 2 as held and value 0 as released. Run and Pause act only on value 1, so keyboard auto-repeat does not repeatedly restart or toggle Pause.
+Enter/KP Enter, Esc, and P act only on the global up-to-down transition. Therefore multiple event endpoints cannot duplicate Run, Stop, or Pause commands. Esc writes `Run = false`; Enter/KP Enter writes `Run = true`; P toggles Pause.
 
-On USB keyboard removal, held movement and Fire states from that device are released before the `Usb` object is removed.
+On USB keyboard removal, `ReleaseDeviceKeys(devnode)` decrements every held global key count, refreshes movement/Fire, and then removes the corresponding `Usb` object. This prevents latched gameplay input.
 
-For this project, do **not** use the Q-SYS `USB Input` component alongside this direct Lua HID controller. The f5Rocket design previously observed `USB Input` interfering with direct `Usb.New()` keyboard handling.
-
-If a keyboard was already attached before the script started and it does not appear, unplug/reconnect it once so `UsbMonitor` receives the device-add event.
+For this project, do **not** use the Q-SYS `USB Input` component alongside this direct Lua HID controller. It must be removed so the proven `UsbMonitor.New("input")` / `Usb.New(devnode)` path owns keyboard input.
 
 ## Player firing limits
 

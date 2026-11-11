@@ -1,241 +1,785 @@
--- f5Rocket USB HID Keyboard Controller
--- Q-SYS Control Script for a physical USB keyboard connected to a Core USB-A port.
+-- ============================================================
+-- f5Rocket USB Keyboard Controller
+-- Q-SYS Control Script v2
 --
--- Requirements:
---   1. The f5Rocket plugin component Code Name must be: f5Rocket
---   2. Script Access must be enabled for the f5Rocket component.
---   3. Paste this file into a Q-SYS Control Script component.
---   4. Run the design on a Core with a USB-A host port.
+-- IMPORTANT:
+-- 1. REMOVE the "USB Input" component from the design.
+-- 2. f5Rocket Code Name = f5Rocket
+-- 3. f5Rocket Script Access = All
 --
--- Key mapping:
---   W / Up Arrow       -> Up
---   S / Down Arrow     -> Down
---   A / Left Arrow     -> Left
---   D / Right Arrow    -> Right
---   Space              -> Fire
---   Enter / KP Enter   -> Run / Restart
---   P                  -> Pause toggle
+-- Keyboard:
+--   W / Arrow Up       = UP
+--   S / Arrow Down     = DOWN
+--   A / Arrow Left     = LEFT
+--   D / Arrow Right    = RIGHT
+--   SPACE              = FIRE
+--   ENTER              = RUN
+--   ESC                = STOP
+--   P                  = PAUSE toggle
 --
--- Notes:
---   - Key value 0 = release, 1 = press, 2 = held/repeat.
---   - Movement and Fire preserve true simultaneous key state.
---   - Run and Pause react only to the initial press, not repeat events.
---   - UsbMonitor / Usb objects are intentionally global to avoid garbage collection.
+-- Supports simultaneous keys:
+--   W + D + SPACE
+-- ============================================================
 
-GAME_COMPONENT_NAME = "f5Rocket"
 
-Game = Component.New(GAME_COMPONENT_NAME)
+---------------------------------------------------------------
+-- CONFIG
+---------------------------------------------------------------
 
-UsbKeyboardMonitor = UsbMonitor.New("input")
-UsbKeyboardDevices = {}
+local GAME_COMPONENT = "f5Rocket"
 
--- Per-action token sets. A token is devnode:keycode, so multiple physical
--- keys (for example W + Up Arrow) and multiple keyboards can safely share
--- one f5Rocket control without premature release.
-UsbKeyboardHeld = {
-  Up = {},
-  Down = {},
-  Left = {},
-  Right = {},
-  Fire = {}
+
+---------------------------------------------------------------
+-- RAW LINUX / Q-SYS KEY CODES
+--
+-- Using numeric codes intentionally.
+-- This avoids differences in Usb.Key enum naming.
+---------------------------------------------------------------
+
+local KEY = {
+  ESC       = 1,
+
+  W         = 17,
+  P         = 25,
+  ENTER     = 28,
+
+  A         = 30,
+  S         = 31,
+  D         = 32,
+
+  SPACE     = 57,
+
+  KP_ENTER  = 96,
+
+  UP        = 103,
+  LEFT      = 105,
+  RIGHT     = 106,
+  DOWN      = 108
 }
 
-UsbKeyboardDeviceTokens = {}
-UsbKeyboardKeyMap = {}
 
-local function AddMappedKey(keyName, action)
-  local code = Usb.Key[keyName]
-  if code ~= nil then
-    UsbKeyboardKeyMap[code] = action
-  else
-    print("[f5Rocket USB] Usb.Key." .. keyName .. " is unavailable on this Q-SYS version")
-  end
-end
+---------------------------------------------------------------
+-- f5ROCKET COMPONENT
+---------------------------------------------------------------
 
-AddMappedKey("KEY_W", "Up")
-AddMappedKey("KEY_UP", "Up")
-AddMappedKey("KEY_S", "Down")
-AddMappedKey("KEY_DOWN", "Down")
-AddMappedKey("KEY_A", "Left")
-AddMappedKey("KEY_LEFT", "Left")
-AddMappedKey("KEY_D", "Right")
-AddMappedKey("KEY_RIGHT", "Right")
-AddMappedKey("KEY_SPACE", "Fire")
+local game = Component.New(GAME_COMPONENT)
 
-local RUN_KEYS = {}
-if Usb.Key.KEY_ENTER ~= nil then
-  RUN_KEYS[Usb.Key.KEY_ENTER] = true
-end
-if Usb.Key.KEY_KPENTER ~= nil then
-  RUN_KEYS[Usb.Key.KEY_KPENTER] = true
-end
+-- Map:
+--
+-- lower-case control name -> actual Q-SYS control object
+--
+local gameControls = {}
 
-local PAUSE_KEYS = {}
-if Usb.Key.KEY_P ~= nil then
-  PAUSE_KEYS[Usb.Key.KEY_P] = true
-end
 
-local function SetGameBoolean(controlName, value)
-  local control = Game[controlName]
-  if control ~= nil and control.Boolean ~= value then
-    control.Boolean = value
-  end
-end
+print("")
+print("========================================")
+print("f5Rocket COMPONENT CONTROLS")
+print("========================================")
 
-local function RefreshAction(action)
-  SetGameBoolean(action, next(UsbKeyboardHeld[action]) ~= nil)
-end
+for name, control in pairs(game) do
 
-local function SetHeld(devnode, code, action, isHeld)
-  local token = devnode .. ":" .. tostring(code)
+  local normalized =
+    string.lower(tostring(name))
 
-  if UsbKeyboardDeviceTokens[devnode] == nil then
-    UsbKeyboardDeviceTokens[devnode] = {}
-  end
+  gameControls[normalized] = control
 
-  if isHeld then
-    UsbKeyboardHeld[action][token] = true
-    UsbKeyboardDeviceTokens[devnode][token] = action
-  else
-    UsbKeyboardHeld[action][token] = nil
-    UsbKeyboardDeviceTokens[devnode][token] = nil
-  end
-
-  RefreshAction(action)
-end
-
-local function ReleaseDevice(devnode)
-  local tokens = UsbKeyboardDeviceTokens[devnode]
-  if tokens == nil then
-    return
-  end
-
-  local changed = {}
-  for token, action in pairs(tokens) do
-    UsbKeyboardHeld[action][token] = nil
-    changed[action] = true
-  end
-
-  UsbKeyboardDeviceTokens[devnode] = nil
-
-  for action, _ in pairs(changed) do
-    RefreshAction(action)
-  end
-end
-
-local function ReleaseAllGameplayKeys()
-  for action, tokens in pairs(UsbKeyboardHeld) do
-    for token, _ in pairs(tokens) do
-      tokens[token] = nil
-    end
-    SetGameBoolean(action, false)
-  end
-
-  UsbKeyboardDeviceTokens = {}
-end
-
-local function HandleKeyboardData(devnode, data)
-  if data == nil or data.Type ~= Usb.Type.KEY then
-    return
-  end
-
-  local action = UsbKeyboardKeyMap[data.Code]
-  if action ~= nil then
-    if data.Value == 0 then
-      SetHeld(devnode, data.Code, action, false)
-    elseif data.Value == 1 or data.Value == 2 then
-      SetHeld(devnode, data.Code, action, true)
-    end
-    return
-  end
-
-  -- Momentary Run / Restart: only the first press event.
-  if RUN_KEYS[data.Code] and data.Value == 1 then
-    if Game["Run"] ~= nil then
-      Game["Run"].Boolean = true
-    end
-    return
-  end
-
-  -- Toggle Pause: ignore held/repeat events so one physical key press toggles once.
-  if PAUSE_KEYS[data.Code] and data.Value == 1 then
-    if Game["Pause"] ~= nil then
-      Game["Pause"].Boolean = not Game["Pause"].Boolean
-    end
-  end
-end
-
-local function IsUsbKeyboard(device)
-  if device == nil or device.devnode == nil then
-    return false
-  end
-
-  if string.sub(device.devnode, 1, 16) ~= "/dev/input/event" then
-    return false
-  end
-
-  local properties = device.properties or {}
-
-  return properties.ID_BUS == "usb" and
-    (properties.ID_INPUT_KEYBOARD == "1" or properties.ID_INPUT_KEY == "1")
-end
-
-local function AttachUsbKeyboard(device)
-  local devnode = device.devnode
-
-  if UsbKeyboardDevices[devnode] ~= nil then
-    return
-  end
-
-  local usbDevice = Usb.New(devnode)
-  UsbKeyboardDevices[devnode] = usbDevice
-  UsbKeyboardDeviceTokens[devnode] = UsbKeyboardDeviceTokens[devnode] or {}
-
-  usbDevice.EventHandler = function(data)
-    HandleKeyboardData(devnode, data)
-  end
-
-  local properties = device.properties or {}
   print(
-    "[f5Rocket USB] Keyboard attached:",
-    devnode,
-    properties.ID_VENDOR or "?",
-    properties.ID_MODEL or "?"
+    "CONTROL:",
+    tostring(name)
   )
+
 end
 
-local function DetachUsbKeyboard(device)
-  local devnode = device.devnode
-  if devnode == nil then
-    return
+print("========================================")
+print("")
+
+
+---------------------------------------------------------------
+-- GAME CONTROL HELPERS
+---------------------------------------------------------------
+
+local function GetGameControl(name)
+
+  if name == nil then
+    return nil
   end
 
-  ReleaseDevice(devnode)
+  return gameControls[
+    string.lower(tostring(name))
+  ]
 
-  local usbDevice = UsbKeyboardDevices[devnode]
-  if usbDevice ~= nil then
-    usbDevice.EventHandler = function() end
-    UsbKeyboardDevices[devnode] = nil
-  end
-
-  print("[f5Rocket USB] Keyboard detached:", devnode)
 end
 
-UsbKeyboardMonitor.EventHandler = function(device)
-  if not IsUsbKeyboard(device) then
-    return
+
+local function SetGameControl(name, value)
+
+  local control = GetGameControl(name)
+
+  if control == nil then
+
+    print(
+      "[f5Rocket] CONTROL NOT FOUND:",
+      tostring(name)
+    )
+
+    return false
   end
 
-  if device.Added then
-    AttachUsbKeyboard(device)
+  control.Boolean = value
+
+  return true
+
+end
+
+
+local function GetGameBoolean(name)
+
+  local control = GetGameControl(name)
+
+  if control == nil then
+    return false
+  end
+
+  return control.Boolean
+
+end
+
+
+local function ToggleGameControl(name)
+
+  local control = GetGameControl(name)
+
+  if control == nil then
+
+    print(
+      "[f5Rocket] CONTROL NOT FOUND:",
+      tostring(name)
+    )
+
+    return false
+  end
+
+  control.Boolean =
+    not control.Boolean
+
+  return true
+
+end
+
+
+---------------------------------------------------------------
+-- CHECK REQUIRED CONTROLS
+---------------------------------------------------------------
+
+local requiredControls = {
+  "Run",
+  "Pause",
+  "Up",
+  "Down",
+  "Left",
+  "Right",
+  "Fire"
+}
+
+
+print("f5Rocket CONTROL CHECK")
+
+for _, name in ipairs(requiredControls) do
+
+  if GetGameControl(name) then
+
+    print(
+      "OK:",
+      name
+    )
+
   else
-    DetachUsbKeyboard(device)
+
+    print(
+      "MISSING:",
+      name
+    )
+
   end
+
 end
 
--- Start from a neutral gameplay input state.
-ReleaseAllGameplayKeys()
+print("----------------------------------------")
 
-print("[f5Rocket USB] Ready")
-print("[f5Rocket USB] Waiting for USB HID keyboard on a Core USB-A port")
-print("[f5Rocket USB] Target component Code Name:", GAME_COMPONENT_NAME)
+
+---------------------------------------------------------------
+-- USB OBJECTS
+--
+-- Global references are intentional.
+---------------------------------------------------------------
+
+usbMonitor = UsbMonitor.New("input")
+
+usbDevices = {}
+
+-- Individual state for each USB event node.
+deviceKeyStates = {}
+
+-- Number of attached keyboard endpoints currently reporting
+-- a given key as down.
+globalKeyCounts = {}
+
+
+---------------------------------------------------------------
+-- KEY STATE HELPERS
+---------------------------------------------------------------
+
+local function IsKeyDown(code)
+
+  return
+    (globalKeyCounts[code] or 0) > 0
+
+end
+
+
+local function IncrementKey(code)
+
+  globalKeyCounts[code] =
+    (globalKeyCounts[code] or 0) + 1
+
+end
+
+
+local function DecrementKey(code)
+
+  local count =
+    (globalKeyCounts[code] or 0) - 1
+
+  if count < 0 then
+    count = 0
+  end
+
+  globalKeyCounts[code] = count
+
+end
+
+
+---------------------------------------------------------------
+-- CONTINUOUS GAME INPUT
+--
+-- This is what allows true simultaneous keyboard control.
+---------------------------------------------------------------
+
+local function RefreshContinuousControls()
+
+  local up =
+    IsKeyDown(KEY.W) or
+    IsKeyDown(KEY.UP)
+
+  local down =
+    IsKeyDown(KEY.S) or
+    IsKeyDown(KEY.DOWN)
+
+  local left =
+    IsKeyDown(KEY.A) or
+    IsKeyDown(KEY.LEFT)
+
+  local right =
+    IsKeyDown(KEY.D) or
+    IsKeyDown(KEY.RIGHT)
+
+  local fire =
+    IsKeyDown(KEY.SPACE)
+
+
+  SetGameControl(
+    "Up",
+    up
+  )
+
+  SetGameControl(
+    "Down",
+    down
+  )
+
+  SetGameControl(
+    "Left",
+    left
+  )
+
+  SetGameControl(
+    "Right",
+    right
+  )
+
+  SetGameControl(
+    "Fire",
+    fire
+  )
+
+end
+
+
+---------------------------------------------------------------
+-- COMMAND KEYS
+---------------------------------------------------------------
+
+local function HandleCommandKey(
+  code,
+  globalFirstPress
+)
+
+  if not globalFirstPress then
+    return
+  end
+
+
+  -------------------------------------------------------------
+  -- ENTER = RUN
+  -------------------------------------------------------------
+
+  if code == KEY.ENTER or
+     code == KEY.KP_ENTER then
+
+    if SetGameControl(
+      "Run",
+      true
+    ) then
+
+      print(
+        "[f5Rocket] RUN"
+      )
+
+    end
+
+    return
+  end
+
+
+  -------------------------------------------------------------
+  -- ESC = STOP
+  -------------------------------------------------------------
+
+  if code == KEY.ESC then
+
+    if SetGameControl(
+      "Run",
+      false
+    ) then
+
+      print(
+        "[f5Rocket] STOP"
+      )
+
+    end
+
+    return
+  end
+
+
+  -------------------------------------------------------------
+  -- P = PAUSE TOGGLE
+  -------------------------------------------------------------
+
+  if code == KEY.P then
+
+    if ToggleGameControl(
+      "Pause"
+    ) then
+
+      print(
+        "[f5Rocket] PAUSE =",
+        tostring(
+          GetGameBoolean("Pause")
+        )
+      )
+
+    end
+
+    return
+  end
+
+end
+
+
+---------------------------------------------------------------
+-- USB KEY EVENT
+---------------------------------------------------------------
+
+local function HandleKeyboardEvent(
+  devnode,
+  data
+)
+
+  if data == nil then
+    return
+  end
+
+
+  -------------------------------------------------------------
+  -- Q-SYS / Linux event:
+  --
+  -- Type 1 = KEY
+  -------------------------------------------------------------
+
+  if data.Type ~= 1 then
+    return
+  end
+
+
+  local code =
+    tonumber(data.Code)
+
+  local value =
+    tonumber(data.Value)
+
+
+  if code == nil or
+     value == nil then
+
+    return
+  end
+
+
+  -------------------------------------------------------------
+  -- Values:
+  --
+  -- 0 = released
+  -- 1 = pressed
+  -- 2 = repeat / held
+  -------------------------------------------------------------
+
+  if value ~= 0 and
+     value ~= 1 and
+     value ~= 2 then
+
+    return
+  end
+
+
+  print(
+    "KEY",
+    code,
+    "VALUE",
+    value,
+    "SOURCE",
+    devnode
+  )
+
+
+  -------------------------------------------------------------
+  -- Repeat event.
+  --
+  -- State is already down, so nothing needs changing.
+  -------------------------------------------------------------
+
+  if value == 2 then
+    return
+  end
+
+
+  local states =
+    deviceKeyStates[devnode]
+
+  if states == nil then
+
+    states = {}
+
+    deviceKeyStates[devnode] =
+      states
+
+  end
+
+
+  local wasDown =
+    states[code] == true
+
+  local isDown =
+    value == 1
+
+
+  -------------------------------------------------------------
+  -- Ignore duplicate state from the same endpoint.
+  -------------------------------------------------------------
+
+  if wasDown == isDown then
+    return
+  end
+
+
+  local globalWasDown =
+    IsKeyDown(code)
+
+
+  -------------------------------------------------------------
+  -- PRESS
+  -------------------------------------------------------------
+
+  if isDown then
+
+    states[code] = true
+
+    IncrementKey(code)
+
+
+  -------------------------------------------------------------
+  -- RELEASE
+  -------------------------------------------------------------
+
+  else
+
+    states[code] = false
+
+    DecrementKey(code)
+
+  end
+
+
+  local globalIsDown =
+    IsKeyDown(code)
+
+
+  -------------------------------------------------------------
+  -- Update movement/fire states.
+  -------------------------------------------------------------
+
+  RefreshContinuousControls()
+
+
+  -------------------------------------------------------------
+  -- Command keys are triggered only on the transition:
+  --
+  -- globally UP -> globally DOWN
+  --
+  -- Therefore if event5 and event9 both send ENTER/P,
+  -- the command still runs only once.
+  -------------------------------------------------------------
+
+  local globalFirstPress =
+    (not globalWasDown) and
+    globalIsDown
+
+  HandleCommandKey(
+    code,
+    globalFirstPress
+  )
+
+end
+
+
+---------------------------------------------------------------
+-- REMOVE DEVICE KEY STATES
+--
+-- Prevent stuck movement if keyboard/dongle is unplugged while
+-- a key is held.
+---------------------------------------------------------------
+
+local function ReleaseDeviceKeys(
+  devnode
+)
+
+  local states =
+    deviceKeyStates[devnode]
+
+  if states == nil then
+    return
+  end
+
+
+  for code, down in pairs(states) do
+
+    if down then
+      DecrementKey(code)
+    end
+
+  end
+
+
+  deviceKeyStates[devnode] =
+    nil
+
+
+  RefreshContinuousControls()
+
+end
+
+
+---------------------------------------------------------------
+-- USB DEVICE MONITOR
+---------------------------------------------------------------
+
+usbMonitor.EventHandler =
+  function(device)
+
+    if device == nil or
+       device.devnode == nil then
+
+      return
+
+    end
+
+
+    local props =
+      device.properties or {}
+
+
+    -----------------------------------------------------------
+    -- Keyboard detector
+    -----------------------------------------------------------
+
+    local keyboardFlag =
+      props.ID_INPUT_KEYBOARD
+
+    local isKeyboard =
+      keyboardFlag == "1" or
+      keyboardFlag == 1 or
+      keyboardFlag == true
+
+
+    if not isKeyboard then
+      return
+    end
+
+
+    local devnode =
+      device.devnode
+
+
+    -----------------------------------------------------------
+    -- DEVICE ADDED
+    -----------------------------------------------------------
+
+    if device.Added then
+
+      print("")
+
+      print(
+        "[USB] KEYBOARD FOUND:",
+        devnode
+      )
+
+      print(
+        "[USB] VENDOR:",
+        tostring(
+          props.ID_VENDOR
+        )
+      )
+
+      print(
+        "[USB] MODEL:",
+        tostring(
+          props.ID_MODEL
+        )
+      )
+
+      print(
+        "[USB] INTERFACE:",
+        tostring(
+          props.ID_USB_INTERFACE_NUM
+        )
+      )
+
+
+      local usb =
+        Usb.New(devnode)
+
+
+      deviceKeyStates[devnode] =
+        {}
+
+
+      usb.EventHandler =
+        function(data)
+
+          HandleKeyboardEvent(
+            devnode,
+            data
+          )
+
+        end
+
+
+      usbDevices[devnode] =
+        usb
+
+
+      print(
+        "[USB] ATTACHED:",
+        devnode
+      )
+
+
+    -----------------------------------------------------------
+    -- DEVICE REMOVED
+    -----------------------------------------------------------
+
+    else
+
+      print(
+        "[USB] KEYBOARD REMOVED:",
+        devnode
+      )
+
+
+      ReleaseDeviceKeys(
+        devnode
+      )
+
+
+      if usbDevices[devnode] then
+
+        usbDevices[devnode].EventHandler =
+          function()
+          end
+
+        usbDevices[devnode] =
+          nil
+
+      end
+
+    end
+
+  end
+
+
+---------------------------------------------------------------
+-- INITIAL STATE
+---------------------------------------------------------------
+
+SetGameControl(
+  "Up",
+  false
+)
+
+SetGameControl(
+  "Down",
+  false
+)
+
+SetGameControl(
+  "Left",
+  false
+)
+
+SetGameControl(
+  "Right",
+  false
+)
+
+SetGameControl(
+  "Fire",
+  false
+)
+
+
+print("")
+print("========================================")
+print("f5Rocket USB KEYBOARD READY")
+print("========================================")
+print("W / UP ARROW       = UP")
+print("S / DOWN ARROW     = DOWN")
+print("A / LEFT ARROW     = LEFT")
+print("D / RIGHT ARROW    = RIGHT")
+print("SPACE              = FIRE")
+print("ENTER              = RUN")
+print("ESC                = STOP")
+print("P                  = PAUSE")
+print("----------------------------------------")
+print("Supports W + D + SPACE simultaneously")
+print("========================================")
+print("")
