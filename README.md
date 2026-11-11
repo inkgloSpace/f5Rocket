@@ -7,8 +7,8 @@ f5Rocket is a semi-8-bit vertical arcade shooter implemented as a production Q-S
 - Q-SYS Designer and Q-SYS Core
 - 320 × 480 logical game coordinates
 - 480 × 720 plugin display
-- Fixed 30 Hz gameplay update/render rate
-- 15 Hz seamless stage-background render rate from the same timer
+- Fixed 30 Hz gameplay simulation rate
+- 20 Hz gameplay-overlay publication and 10 Hz seamless-background publication from the same timer
 
 ## Build
 
@@ -146,12 +146,14 @@ Player fire supports up to five rapid shots per burst. A complete burst triggers
 
 The plugin uses two aligned Button controls driven by one 30 Hz timer:
 
-- `BackgroundViewport` renders the vertically looping stage background at 15 Hz.
-- `Viewport` receives the transparent gameplay overlay at 30 Hz.
+- `BackgroundViewport` publishes the vertically looping stage background at 10 Hz.
+- `Viewport` publishes the transparent gameplay overlay at 20 Hz.
 
 Each stage background is a seamless 320 × 480 portrait PNG. Its SVG embeds the tile once in `<defs>` and uses two integer-positioned `<use href>` instances to cover the 320 × 480 logical viewport while scrolling downward. The stages progress from the bright alien-controlled upper atmosphere, through a purple asteroid field, into the enemy headquarters. Gameplay frames use the same conservative definitions/reuse strategy. Separate 64 KiB raw-SVG guards protect both rendering paths.
 
-Simulation and gameplay rendering remain fixed at 30 Hz, while the seamless background remains at 15 Hz on the same timer. Each dynamic gameplay SVG embeds only the PNG definitions required by its current player, stage enemy or boss, and visible explosion frames; repeated objects reference those definitions through `<use>`. Fixed gameplay pools remain in use, and fully frozen Game Over or Mission Complete scenes stop the timer only after their final frame has been assigned.
+Simulation remains fixed at 30 Hz. Visual publication follows a deterministic Game–Game–Background cycle, producing 20 Hz gameplay and 10 Hz background updates with at most one large Legend assignment during a normal timer callback. The renderer always uses the latest state and does not queue catch-up frames. Each dynamic gameplay SVG embeds only the PNG definitions required by its current player, stage enemy or boss, and visible explosion frames; repeated objects reference those definitions through `<use>`. Identical SVG snapshots skip Base64, JSON, and Legend publication. Fixed gameplay pools remain in use, and fully frozen Game Over or Mission Complete scenes stop the timer only after their final frame has been assigned.
+
+Lightweight Debug Output instrumentation measures timer gaps, simulation, SVG construction, Base64, JSON, Legend assignment, and total callback time. Slow-event output is threshold-based and rate-limited, with one bounded maximum summary every 300 active ticks; it adds no controls, timers, or unbounded history.
 
 The player uses optimized 160 × 240 PNG sources, renders at 56 × 84 logical pixels, and retains a 40 × 48 collision box. Projectiles are lightweight reusable SVG definitions.
 

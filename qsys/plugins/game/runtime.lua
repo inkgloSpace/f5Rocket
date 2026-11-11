@@ -1,7 +1,10 @@
 local rapidjson = require("rapidjson")
 
 local gameState = CreateGameState()
-local backgroundRenderCounter = 0
+local renderPhase = 0
+local backgroundRenderPending = false
+local lastGameSvg = nil
+local lastBackgroundSvg = nil
 local recentHorizontalIntent = 0
 local recentHorizontalTicks = 0
 local recentVerticalIntent = 0
@@ -24,12 +27,65 @@ BackgroundLegend = {
 -- Keep the single timer globally scoped so Q-SYS Lua GC cannot remove it.
 GameTimer = Timer.New()
 
+local lastTimerNow = nil
+local performanceTicks = 0
+local slowTickCount = 0
+local slowLogCooldownTicks = 0
+local maxTickGapMs = 0
+local maxSimulationMs = 0
+local maxGameBuildMs = 0
+local maxGameBase64Ms = 0
+local maxGameJsonMs = 0
+local maxGamePublishMs = 0
+local maxGameRenderMs = 0
+local maxBackgroundBuildMs = 0
+local maxBackgroundBase64Ms = 0
+local maxBackgroundJsonMs = 0
+local maxBackgroundPublishMs = 0
+local maxBackgroundRenderMs = 0
+local maxTotalCallbackMs = 0
+local maxGameRawBytes = 0
+local maxBackgroundRawBytes = 0
+
+local function ElapsedMilliseconds(startedAt)
+  return (Timer.Now() - startedAt) * 1000
+end
+
+local function ResetPerformanceWindow()
+  performanceTicks = 0
+  slowTickCount = 0
+  slowLogCooldownTicks = 0
+  maxTickGapMs = 0
+  maxSimulationMs = 0
+  maxGameBuildMs = 0
+  maxGameBase64Ms = 0
+  maxGameJsonMs = 0
+  maxGamePublishMs = 0
+  maxGameRenderMs = 0
+  maxBackgroundBuildMs = 0
+  maxBackgroundBase64Ms = 0
+  maxBackgroundJsonMs = 0
+  maxBackgroundPublishMs = 0
+  maxBackgroundRenderMs = 0
+  maxTotalCallbackMs = 0
+  maxGameRawBytes = 0
+  maxBackgroundRawBytes = 0
+end
+
+local function ResetPerformanceTiming()
+  ResetPerformanceWindow()
+  lastTimerNow = Timer.Now()
+end
+
 local function RenderBackgroundFrame()
+  local renderStartedAt = Timer.Now()
+  local buildStartedAt = renderStartedAt
   local svg = BuildStageBackgroundSvg(
     gameState.stageIndex,
     gameState.backgroundScrollY
   )
   local rawBytes = #svg
+  local buildMs = ElapsedMilliseconds(buildStartedAt)
 
   if rawBytes > GAME_CONFIG.MaxRawBackgroundSvgBytes then
     error(
@@ -39,14 +95,36 @@ local function RenderBackgroundFrame()
     )
   end
 
-  local encodedSvg = Crypto.Base64Encode(svg)
-  BackgroundLegend.IconData = encodedSvg
-  Controls.BackgroundViewport.Legend = rapidjson.encode(BackgroundLegend)
+  local base64Ms = 0
+  local jsonMs = 0
+  local publishMs = 0
+  if svg ~= lastBackgroundSvg then
+    local base64StartedAt = Timer.Now()
+    local encodedSvg = Crypto.Base64Encode(svg)
+    base64Ms = ElapsedMilliseconds(base64StartedAt)
+
+    local jsonStartedAt = Timer.Now()
+    BackgroundLegend.IconData = encodedSvg
+    local legend = rapidjson.encode(BackgroundLegend)
+    BackgroundLegend.IconData = ""
+    jsonMs = ElapsedMilliseconds(jsonStartedAt)
+
+    local publishStartedAt = Timer.Now()
+    Controls.BackgroundViewport.Legend = legend
+    publishMs = ElapsedMilliseconds(publishStartedAt)
+    lastBackgroundSvg = svg
+  end
+  local renderMs = ElapsedMilliseconds(renderStartedAt)
+
+  return buildMs, base64Ms, jsonMs, publishMs, renderMs, rawBytes
 end
 
 local function RenderGameFrame()
+  local renderStartedAt = Timer.Now()
+  local buildStartedAt = renderStartedAt
   local svg = BuildGameSvg(gameState)
   local rawBytes = #svg
+  local buildMs = ElapsedMilliseconds(buildStartedAt)
 
   if rawBytes > GAME_CONFIG.MaxRawSvgBytes then
     error(
@@ -56,8 +134,148 @@ local function RenderGameFrame()
     )
   end
 
-  GameLegend.IconData = Crypto.Base64Encode(svg)
-  Controls.Viewport.Legend = rapidjson.encode(GameLegend)
+  local base64Ms = 0
+  local jsonMs = 0
+  local publishMs = 0
+  if svg ~= lastGameSvg then
+    local base64StartedAt = Timer.Now()
+    local encodedSvg = Crypto.Base64Encode(svg)
+    base64Ms = ElapsedMilliseconds(base64StartedAt)
+
+    local jsonStartedAt = Timer.Now()
+    GameLegend.IconData = encodedSvg
+    local legend = rapidjson.encode(GameLegend)
+    GameLegend.IconData = ""
+    jsonMs = ElapsedMilliseconds(jsonStartedAt)
+
+    local publishStartedAt = Timer.Now()
+    Controls.Viewport.Legend = legend
+    publishMs = ElapsedMilliseconds(publishStartedAt)
+    lastGameSvg = svg
+  end
+  local renderMs = ElapsedMilliseconds(renderStartedAt)
+
+  return buildMs, base64Ms, jsonMs, publishMs, renderMs, rawBytes
+end
+
+local function UpdatePerformanceDiagnostics(
+    tickGapMs,
+    simulationMs,
+    gameBuildMs,
+    gameBase64Ms,
+    gameJsonMs,
+    gamePublishMs,
+    gameRenderMs,
+    gameRawBytes,
+    backgroundBuildMs,
+    backgroundBase64Ms,
+    backgroundJsonMs,
+    backgroundPublishMs,
+    backgroundRenderMs,
+    backgroundRawBytes,
+    totalCallbackMs,
+    publishedLayer)
+  performanceTicks = performanceTicks + 1
+  maxTickGapMs = math.max(maxTickGapMs, tickGapMs)
+  maxSimulationMs = math.max(maxSimulationMs, simulationMs)
+  maxGameBuildMs = math.max(maxGameBuildMs, gameBuildMs)
+  maxGameBase64Ms = math.max(maxGameBase64Ms, gameBase64Ms)
+  maxGameJsonMs = math.max(maxGameJsonMs, gameJsonMs)
+  maxGamePublishMs = math.max(maxGamePublishMs, gamePublishMs)
+  maxGameRenderMs = math.max(maxGameRenderMs, gameRenderMs)
+  maxBackgroundBuildMs = math.max(maxBackgroundBuildMs, backgroundBuildMs)
+  maxBackgroundBase64Ms = math.max(maxBackgroundBase64Ms, backgroundBase64Ms)
+  maxBackgroundJsonMs = math.max(maxBackgroundJsonMs, backgroundJsonMs)
+  maxBackgroundPublishMs = math.max(maxBackgroundPublishMs, backgroundPublishMs)
+  maxBackgroundRenderMs = math.max(maxBackgroundRenderMs, backgroundRenderMs)
+  maxTotalCallbackMs = math.max(maxTotalCallbackMs, totalCallbackMs)
+  maxGameRawBytes = math.max(maxGameRawBytes, gameRawBytes)
+  maxBackgroundRawBytes = math.max(maxBackgroundRawBytes, backgroundRawBytes)
+
+  local slowStep =
+    simulationMs > GAME_CONFIG.PerfSlowStepMs or
+    gameRenderMs > GAME_CONFIG.PerfSlowStepMs or
+    gameBuildMs > GAME_CONFIG.PerfSlowStepMs or
+    gameBase64Ms > GAME_CONFIG.PerfSlowStepMs or
+    gameJsonMs > GAME_CONFIG.PerfSlowStepMs or
+    gamePublishMs > GAME_CONFIG.PerfSlowStepMs or
+    backgroundRenderMs > GAME_CONFIG.PerfSlowStepMs or
+    backgroundBuildMs > GAME_CONFIG.PerfSlowStepMs or
+    backgroundBase64Ms > GAME_CONFIG.PerfSlowStepMs or
+    backgroundJsonMs > GAME_CONFIG.PerfSlowStepMs or
+    backgroundPublishMs > GAME_CONFIG.PerfSlowStepMs
+  local slowTick =
+    tickGapMs > GAME_CONFIG.PerfSlowTickGapMs or
+    totalCallbackMs > GAME_CONFIG.PerfSlowCallbackMs or
+    slowStep
+
+  if slowLogCooldownTicks > 0 then
+    slowLogCooldownTicks = slowLogCooldownTicks - 1
+  end
+
+  if slowTick then
+    slowTickCount = slowTickCount + 1
+    if slowLogCooldownTicks <= 0 then
+      print(string.format(
+        "[f5Rocket perf] layer=%s gap=%.1f sim=%.1f " ..
+        "game=%.1f[%.1f/%.1f/%.1f/%.1f] " ..
+        "bg=%.1f[%.1f/%.1f/%.1f/%.1f] " ..
+        "total=%.1f bytes=%d/%d stage=%s phase=%s boss=%s exp=%d",
+        publishedLayer,
+        tickGapMs,
+        simulationMs,
+        gameRenderMs,
+        gameBuildMs,
+        gameBase64Ms,
+        gameJsonMs,
+        gamePublishMs,
+        backgroundRenderMs,
+        backgroundBuildMs,
+        backgroundBase64Ms,
+        backgroundJsonMs,
+        backgroundPublishMs,
+        totalCallbackMs,
+        gameRawBytes,
+        backgroundRawBytes,
+        gameState.stageName,
+        gameState.stagePhase,
+        tostring(gameState.boss.active),
+        CountActiveExplosions(gameState)
+      ))
+      slowLogCooldownTicks = GAME_CONFIG.PerfSlowLogIntervalTicks
+    end
+  end
+
+  if performanceTicks >= GAME_CONFIG.PerfSummaryTicks then
+    print(string.format(
+      "[f5Rocket perf] summary maxGap=%.1f maxSim=%.1f " ..
+      "maxGame=%.1f(%.1f/%.1f/%.1f/%.1f) " ..
+      "maxBg=%.1f(%.1f/%.1f/%.1f/%.1f) maxTotal=%.1f " ..
+      "slow=%d maxBytes=%d/%d",
+      maxTickGapMs,
+      maxSimulationMs,
+      maxGameRenderMs,
+      maxGameBuildMs,
+      maxGameBase64Ms,
+      maxGameJsonMs,
+      maxGamePublishMs,
+      maxBackgroundRenderMs,
+      maxBackgroundBuildMs,
+      maxBackgroundBase64Ms,
+      maxBackgroundJsonMs,
+      maxBackgroundPublishMs,
+      maxTotalCallbackMs,
+      slowTickCount,
+      maxGameRawBytes,
+      maxBackgroundRawBytes
+    ))
+    ResetPerformanceWindow()
+  end
+end
+
+local function ResetVisualScheduler(firstPhase)
+  renderPhase = firstPhase or 0
+  backgroundRenderPending = false
 end
 
 local function ResetCardinalChordAssist()
@@ -189,8 +407,9 @@ local function UpdateGameState()
     if nextStage ~= nil then
       ResetEnemies(gameState)
       ResetParallax(gameState, nextStage)
-      backgroundRenderCounter = 0
-      RenderBackgroundFrame()
+      -- Publish the new stage background on this tick instead of issuing a
+      -- background and gameplay Legend update back-to-back.
+      backgroundRenderPending = true
     end
     return
   end
@@ -262,9 +481,10 @@ local function StartGame()
   ResetParallax(gameState, 1)
   gameState.running = true
   gameState.paused = false
-  backgroundRenderCounter = 0
+  ResetVisualScheduler(0)
   RenderBackgroundFrame()
   RenderGameFrame()
+  ResetPerformanceTiming()
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
 end
 
@@ -274,6 +494,7 @@ local function StopGame()
   gameState.running = false
   gameState.paused = false
   Controls.Pause.Boolean = false
+  lastTimerNow = nil
 end
 
 local function PauseGame()
@@ -295,23 +516,106 @@ local function ResumeGame()
 
   ResetCardinalChordAssist()
   gameState.paused = false
-  backgroundRenderCounter = 0
-  RenderBackgroundFrame()
+  -- The paused overlay is removed immediately. Begin with the background
+  -- phase so it catches up on the first resumed timer tick without a second
+  -- Legend assignment in the same callback.
+  ResetVisualScheduler(GAME_CONFIG.BackgroundRenderPhase)
   RenderGameFrame()
+  ResetPerformanceTiming()
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
 end
 
 GameTimer.EventHandler = function()
+  local callbackStartedAt = Timer.Now()
+  local tickGapMs = 0
+  if lastTimerNow ~= nil then
+    tickGapMs = (callbackStartedAt - lastTimerNow) * 1000
+  end
+  lastTimerNow = callbackStartedAt
+
+  local simulationStartedAt = Timer.Now()
   UpdateGameState()
   UpdateBackgroundScroll(gameState)
+  local simulationMs = ElapsedMilliseconds(simulationStartedAt)
 
-  backgroundRenderCounter = backgroundRenderCounter + 1
-  if backgroundRenderCounter >= GAME_CONFIG.BackgroundRenderDivider then
-    backgroundRenderCounter = 0
-    RenderBackgroundFrame()
+  local gameBuildMs = 0
+  local gameBase64Ms = 0
+  local gameJsonMs = 0
+  local gamePublishMs = 0
+  local gameRenderMs = 0
+  local gameRawBytes = 0
+  local backgroundBuildMs = 0
+  local backgroundBase64Ms = 0
+  local backgroundJsonMs = 0
+  local backgroundPublishMs = 0
+  local backgroundRenderMs = 0
+  local backgroundRawBytes = 0
+  local publishedLayer = "none"
+  local frozen = gameState.gameOverFrozen or gameState.campaignFrozen
+
+  if frozen then
+    gameBuildMs,
+      gameBase64Ms,
+      gameJsonMs,
+      gamePublishMs,
+      gameRenderMs,
+      gameRawBytes = RenderGameFrame()
+    publishedLayer = "game-final"
+  elseif backgroundRenderPending then
+    backgroundBuildMs,
+      backgroundBase64Ms,
+      backgroundJsonMs,
+      backgroundPublishMs,
+      backgroundRenderMs,
+      backgroundRawBytes = RenderBackgroundFrame()
+    backgroundRenderPending = false
+    renderPhase = 0
+    publishedLayer = "background-stage"
+  else
+    local currentPhase = renderPhase
+    renderPhase = renderPhase + 1
+    if renderPhase >= GAME_CONFIG.RenderCycleTicks then
+      renderPhase = 0
+    end
+
+    if currentPhase == GAME_CONFIG.BackgroundRenderPhase then
+      backgroundBuildMs,
+        backgroundBase64Ms,
+        backgroundJsonMs,
+        backgroundPublishMs,
+        backgroundRenderMs,
+        backgroundRawBytes = RenderBackgroundFrame()
+      publishedLayer = "background"
+    else
+      gameBuildMs,
+        gameBase64Ms,
+        gameJsonMs,
+        gamePublishMs,
+        gameRenderMs,
+        gameRawBytes = RenderGameFrame()
+      publishedLayer = "game"
+    end
   end
 
-  RenderGameFrame()
+  local totalCallbackMs = ElapsedMilliseconds(callbackStartedAt)
+  UpdatePerformanceDiagnostics(
+    tickGapMs,
+    simulationMs,
+    gameBuildMs,
+    gameBase64Ms,
+    gameJsonMs,
+    gamePublishMs,
+    gameRenderMs,
+    gameRawBytes,
+    backgroundBuildMs,
+    backgroundBase64Ms,
+    backgroundJsonMs,
+    backgroundPublishMs,
+    backgroundRenderMs,
+    backgroundRawBytes,
+    totalCallbackMs,
+    publishedLayer
+  )
 
   -- The final frozen scene has now been assigned. Run remains an independent
   -- control handler, so stopping this one timer removes idle render work
@@ -349,7 +653,9 @@ ResetCardinalChordAssist()
 GameTimer:Stop()
 Controls.Run.Boolean = false
 Controls.Pause.Boolean = false
-backgroundRenderCounter = 0
+ResetVisualScheduler(0)
+ResetPerformanceWindow()
+lastTimerNow = nil
 RenderBackgroundFrame()
 RenderGameFrame()
 

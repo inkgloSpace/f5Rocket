@@ -9,7 +9,19 @@ local GAME_CONFIG = {
   MaxRawSvgBytes = 64 * 1024,
   MaxRawBackgroundSvgBytes = 64 * 1024,
   BackgroundTileHeight = 480,
-  BackgroundRenderDivider = 2,
+
+  -- One 30 Hz timer drives simulation every tick. Visual publication follows
+  -- GAME, GAME, BACKGROUND phases for 20 Hz / 10 Hz output without overlap.
+  RenderCycleTicks = 3,
+  BackgroundRenderPhase = 2,
+
+  -- Lightweight Q-SYS Debug Output diagnostics. Normal frames stay silent;
+  -- the summary cadence is 10 seconds at 30 Hz.
+  PerfSlowTickGapMs = 100,
+  PerfSlowCallbackMs = 30,
+  PerfSlowStepMs = 20,
+  PerfSlowLogIntervalTicks = 30,
+  PerfSummaryTicks = 300,
 
   PlayerWidth = 40,
   PlayerHeight = 48,

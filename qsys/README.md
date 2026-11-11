@@ -48,7 +48,7 @@ The standard-library-only builder:
 
 ## Generated asset data
 
-The asset generator separates dynamic gameplay sprites from seamless stage-background tiles. At runtime, each 30 Hz gameplay frame embeds only the PNG definitions it actually needs: one current player direction when alive, one current-stage enemy when visible, one active boss when present, and only the unique visible explosion frames. Every required asset is defined at most once per frame, while repeated objects reuse it through `<use href>`. Each 320 × 480 portrait background PNG is embedded once in its own SVG `<defs>` block and repeated through two `<use href>` instances.
+The asset generator separates dynamic gameplay sprites from seamless stage-background tiles. At runtime, each gameplay frame embeds only the PNG definitions it actually needs: one current player direction when alive, one current-stage enemy when visible, one active boss when present, and only the unique visible explosion frames. Every required asset is defined at most once per frame, while repeated objects reuse it through `<use href>`. Each 320 × 480 portrait background PNG is embedded once in its own SVG `<defs>` block and repeated through two `<use href>` instances.
 
 The visual progression is Easy/upper atmosphere, Medium/outer space and asteroids, then Hard/inside the alien headquarters. The alien insignia belongs to the enemy faction; the Q-SYS/F5 rocket remains the player hero.
 
@@ -61,17 +61,21 @@ The player PNGs are optimized 160 × 240 sources. They render at 56 × 84 logica
 - Toggle `Pause` stops and restarts the same timer without resetting state
 - 320 × 480 logical coordinates displayed at 480 × 720
 - Scrolling `BackgroundViewport` plus transparent dynamic `Viewport`
-- Gameplay SVG and `Viewport.Legend` update at 30 Hz
-- A render divider of 2 updates the background SVG and `BackgroundViewport.Legend` at 15 Hz
+- Simulation and input sampling remain at 30 Hz
+- A three-phase Game–Game–Background scheduler publishes `Viewport.Legend` at 20 Hz and `BackgroundViewport.Legend` at 10 Hz
+- A normal timer callback publishes at most one large Legend payload; no catch-up frame queue is maintained
 - Deterministic stage, boss, parallax, pool, and input logic
-- One gameplay SVG build, Base64 encode, and `Viewport.Legend` assignment per game frame
+- One SVG build path at most per normal timer callback, with a single Base64/JSON/Legend publication for the selected layer
 - Separate 64 KiB raw-SVG safety guards for gameplay and background frames
 - Static SVG fallbacks, projectile geometry, and parallax definitions are prebuilt once
 - Dynamic PNG `<image>` definitions are prebuilt individually, then selected per frame
-- Per-stage background SVG prefixes are prebuilt; each 15 Hz frame appends only two tile positions
+- Per-stage background SVG prefixes are prebuilt; each 10 Hz frame appends only two tile positions
+- An identical per-layer SVG snapshot skips Base64, JSON encoding, and Legend assignment; only the latest bounded snapshot is retained
 - Fully frozen Game Over and Mission Complete states stop the same `GameTimer` after the final visible frame is assigned; `Run` can still restart normally
 
-This keeps simulation and gameplay rendering at 30 Hz and background rendering at 15 Hz while removing the former all-assets DataURI payload from ordinary frames. Fixed object pools, collision loops, gameplay timing, and the single-timer lifecycle remain unchanged.
+This keeps simulation at 30 Hz while decoupling expensive visual publication to 20 Hz gameplay and 10 Hz background cadence. The scheduler always renders current state, never queues missed visual frames, and removes the previous callback pattern that could assign both large Legends on one tick. Fixed object pools, collision loops, gameplay timing, and the single-timer lifecycle remain unchanged.
+
+Runtime performance instrumentation uses `Timer.Now()` to measure start-to-start timer gaps, simulation, SVG build, Base64 encoding, `rapidjson`, Legend assignment, and total callback time independently for gameplay and background. A slow event is detected when the tick gap exceeds 100 ms, the callback exceeds 30 ms, or an individual measured step exceeds 20 ms; detail output is rate-limited to at most once per 30 ticks. Every 300 active ticks, one bounded maximum summary is printed and the window resets. The diagnostics use numeric accumulators only—no controls, extra timers, per-tick history tables, or continuous Debug Output spam.
 
 ## Controls and input pins
 
@@ -188,7 +192,7 @@ Manual Fire and AutoFire both use the same `FirePlayerBullet` path. Failed fire 
 ## Asset constraints
 
 - Keep hot-frame PNGs compact; their data URIs are repeated inside each dynamic SVG payload.
-- Keep the 320 × 480 seamless stage tiles out of the 30 Hz gameplay frame.
+- Keep the 320 × 480 seamless stage tiles out of the gameplay-overlay frame.
 - Preserve the optimized player sources unless a deliberate asset-pipeline change is made.
 - Update `qsys/tools/build.py`, `renderer/assets.lua`, `asset_map.json`, and `README_ASSETS.txt` together when changing the manifest.
 
@@ -200,6 +204,6 @@ Manual Fire and AutoFire both use the same `FirePlayerBullet` path. Failed fire 
 4. Test Run restart, Pause/resume, movement, diagonal controls, Fire, and AutoFire.
 5. Exercise all three waves, both minibosses, the final boss, Game Over, and Mission Complete.
 6. Confirm stage backgrounds scroll downward without a seam, pause with the game, and reset at stage changes.
-7. Confirm gameplay remains at 30 Hz while the background updates at 15 Hz.
+7. Confirm simulation remains at 30 Hz, gameplay publication at 20 Hz, and background publication at 10 Hz.
 8. Confirm gameplay and background frames remain under their 64 KiB raw guards.
 9. On a real Core, test the USB HID keyboard script with W/A/S/D, arrows, Space, Enter, P, simultaneous keys, and unplug/replug cleanup.
