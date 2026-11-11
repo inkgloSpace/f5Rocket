@@ -8,7 +8,7 @@ local GAME_CONFIG = {
   -- frames are rejected before Base64 encoding or Viewport.Legend assignment.
   MaxRawSvgBytes = 64 * 1024,
   MaxRawBackgroundSvgBytes = 64 * 1024,
-  BackgroundTileHeight = 240,
+  BackgroundTileHeight = 480,
   BackgroundRenderDivider = 2,
 
   PlayerWidth = 40,
@@ -107,7 +107,7 @@ local STAGE_PROFILES = {
     EnemyAsset = "enemy_easy",
     EnemyDefinition = "enemy_easy_down",
     BackgroundAsset = "background_easy_loop",
-    BackgroundScrollSpeed = 0.75,
+    BackgroundScrollSpeed = 0.65,
     BossType = "MINI_EASY"
   },
   [2] = {
@@ -122,7 +122,7 @@ local STAGE_PROFILES = {
     EnemyAsset = "enemy_medium",
     EnemyDefinition = "enemy_medium_down",
     BackgroundAsset = "background_medium_loop",
-    BackgroundScrollSpeed = 1.00,
+    BackgroundScrollSpeed = 0.85,
     BossType = "MINI_MEDIUM"
   },
   [3] = {
@@ -137,7 +137,7 @@ local STAGE_PROFILES = {
     EnemyAsset = "enemy_hard",
     EnemyDefinition = "enemy_hard_down",
     BackgroundAsset = "background_hard_loop",
-    BackgroundScrollSpeed = 1.25,
+    BackgroundScrollSpeed = 1.05,
     BossType = "FINAL"
   }
 }

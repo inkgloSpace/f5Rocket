@@ -53,7 +53,7 @@ The plugin uses two aligned Button controls driven by one 30 Hz timer:
 - `BackgroundViewport` renders the vertically looping stage background at 15 Hz.
 - `Viewport` receives the transparent gameplay overlay at 30 Hz.
 
-Each stage background is a seamless 320 × 240 PNG. Its SVG embeds the tile once in `<defs>` and uses three integer-positioned `<use href>` instances to cover the 320 × 480 logical viewport while scrolling downward. Gameplay frames use the same conservative definitions/reuse strategy. Separate 64 KiB raw-SVG guards protect both rendering paths.
+Each stage background is a seamless 320 × 480 portrait PNG. Its SVG embeds the tile once in `<defs>` and uses two integer-positioned `<use href>` instances to cover the 320 × 480 logical viewport while scrolling downward. The stages progress from the bright alien-controlled upper atmosphere, through a purple asteroid field, into the enemy headquarters. Gameplay frames use the same conservative definitions/reuse strategy. Separate 64 KiB raw-SVG guards protect both rendering paths.
 
 The player uses optimized 160 × 240 PNG sources, renders at 56 × 84 logical pixels, and retains a 40 × 48 collision box. Projectiles are lightweight reusable SVG definitions.
 

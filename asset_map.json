@@ -26,8 +26,8 @@
     "final_boss": {"path": "assets/boss/final_boss.png", "logical_size": [120, 80]}
   },
   "static_background_assets": {
-    "easy": {"path": "assets/background/background_easy_loop.png", "pixel_width": 320, "pixel_height": 240, "usage": "scrolling-stage-background", "vertical_loop": true},
-    "medium": {"path": "assets/background/background_medium_loop.png", "pixel_width": 320, "pixel_height": 240, "usage": "scrolling-stage-background", "vertical_loop": true},
-    "hard": {"path": "assets/background/background_hard_loop.png", "pixel_width": 320, "pixel_height": 240, "usage": "scrolling-stage-background", "vertical_loop": true}
+    "easy": {"path": "assets/background/background_phase1_atmosphere.png", "pixel_width": 320, "pixel_height": 480, "usage": "scrolling-stage-background", "vertical_loop": true, "phase": "upper-atmosphere", "enemy_faction": "alien"},
+    "medium": {"path": "assets/background/background_phase2_asteroids.png", "pixel_width": 320, "pixel_height": 480, "usage": "scrolling-stage-background", "vertical_loop": true, "phase": "outer-space-asteroids", "enemy_faction": "alien"},
+    "hard": {"path": "assets/background/background_phase3_alien_headquarters.png", "pixel_width": 320, "pixel_height": 480, "usage": "scrolling-stage-background", "vertical_loop": true, "phase": "alien-headquarters", "enemy_faction": "alien"}
   }
 }

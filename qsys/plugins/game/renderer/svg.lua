@@ -43,8 +43,6 @@ local function BuildStageBackgroundSvg(stageIndex, scrollY)
     tostring(offset - tileHeight) .. "\"/>"
   parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
     tostring(offset) .. "\"/>"
-  parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
-    tostring(offset + tileHeight) .. "\"/>"
   parts[#parts + 1] = "</svg>"
   return table.concat(parts), profile.BackgroundAsset
 end

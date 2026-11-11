@@ -36,9 +36,9 @@ DYNAMIC_GAMEPLAY_ASSETS = (
 )
 
 STATIC_BACKGROUND_ASSETS = (
-    ("background_easy_loop", "assets/background/background_easy_loop.png"),
-    ("background_medium_loop", "assets/background/background_medium_loop.png"),
-    ("background_hard_loop", "assets/background/background_hard_loop.png"),
+    ("background_easy_loop", "assets/background/background_phase1_atmosphere.png"),
+    ("background_medium_loop", "assets/background/background_phase2_asteroids.png"),
+    ("background_hard_loop", "assets/background/background_phase3_alien_headquarters.png"),
 )
 
 ASSET_GROUPS = (

@@ -44,7 +44,9 @@ The standard-library-only builder:
 
 ## Generated asset data
 
-The asset generator separates dynamic gameplay sprites from seamless stage-background tiles. Dynamic PNG definitions are embedded in the 30 Hz gameplay SVG once and reused with `<use href>`. Each 320 × 240 background PNG is embedded once in its own SVG `<defs>` block and repeated through three `<use href>` instances.
+The asset generator separates dynamic gameplay sprites from seamless stage-background tiles. Dynamic PNG definitions are embedded in the 30 Hz gameplay SVG once and reused with `<use href>`. Each 320 × 480 portrait background PNG is embedded once in its own SVG `<defs>` block and repeated through two `<use href>` instances.
+
+The visual progression is Easy/upper atmosphere, Medium/outer space and asteroids, then Hard/inside the alien headquarters. The alien insignia belongs to the enemy faction; the Q-SYS/F5 rocket remains the player hero.
 
 The player PNGs are optimized 160 × 240 sources. They render at 56 × 84 logical pixels while collision and movement continue to use a 40 × 48 box. Player and hostile projectiles are reusable 6 × 14 SVG definitions, so no projectile PNG payload is required.
 
@@ -80,7 +82,7 @@ Movement and Fire inputs are sampled inside the game tick. Their controls have n
 ## Asset constraints
 
 - Keep hot-frame PNGs compact; their data URIs are repeated inside each dynamic SVG payload.
-- Keep the 320 × 240 seamless stage tiles out of the 30 Hz gameplay frame.
+- Keep the 320 × 480 seamless stage tiles out of the 30 Hz gameplay frame.
 - Preserve the optimized player sources unless a deliberate asset-pipeline change is made.
 - Update `qsys/tools/build.py`, `renderer/assets.lua`, `asset_map.json`, and `README_ASSETS.txt` together when changing the manifest.
 
