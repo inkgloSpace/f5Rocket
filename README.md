@@ -73,6 +73,46 @@ tools/f5Rocket_Keyboard.cpp
 
 The repository workflow rebuilds the standalone x64 EXE when the keyboard-bridge source changes.
 
+## Physical USB keyboard on a Q-SYS Core
+
+For operation on a real Core, a standard USB HID keyboard can be connected directly to a **USB-A host port** on the Core and handled by a standalone Q-SYS Control Script:
+
+```text
+qsys/control-scripts/f5Rocket_USB_Keyboard.lua
+```
+
+This path does not use the Windows QRC bridge. The Control Script uses Q-SYS `UsbMonitor` / `Usb` HID input and writes directly to the f5Rocket component controls.
+
+Setup:
+
+1. Set the f5Rocket plugin component **Code Name** to `f5Rocket`.
+2. Enable **Script Access** for the f5Rocket component.
+3. Add a Q-SYS **Control Script** component to the schematic.
+4. Copy `qsys/control-scripts/f5Rocket_USB_Keyboard.lua` into that Control Script.
+5. Save the design to the Core and run it.
+6. Connect the USB HID keyboard to a Core USB-A host port.
+7. If the keyboard was already connected before the script started and is not detected, unplug/reconnect it once.
+
+Core keyboard mapping:
+
+```text
+W / Up Arrow       Up
+S / Down Arrow     Down
+A / Left Arrow     Left
+D / Right Arrow    Right
+Space              Fire
+Enter / KP Enter   Run / Restart
+P                  Pause toggle
+```
+
+The script tracks press/release state per physical key and per USB device, so true simultaneous combinations such as `W + D + Space` remain active correctly. `Enter` only triggers on the initial key press and `P` toggles Pause only on the initial press; HID repeat events do not retrigger either action.
+
+If a keyboard is removed while movement or Fire is held, the script releases the corresponding f5Rocket controls to prevent a latched input.
+
+For this project, do **not** add/use the Q-SYS `USB Input` component alongside this direct Lua HID controller. The f5Rocket design previously observed that `USB Input` interfered with direct `Usb.New()` keyboard handling. Use the standalone Lua HID path for the physical Core keyboard.
+
+Q-SYS does not guarantee compatibility with every USB HID peripheral, so use a conventional wired USB keyboard for the most predictable behavior.
+
 ## Controls
 
 - `Run`: momentary start/restart pulse
@@ -109,16 +149,18 @@ The player uses optimized 160 × 240 PNG sources, renders at 56 × 84 logical pi
 ## Repository layout
 
 ```text
-assets/                         Production PNG artwork
-qsys/plugins/game/              Authoritative modular Lua source
-qsys/plugins/game/generated/    Deterministic generated asset data
-qsys/tools/build.py             Production plugin build tool
-qsys/dist/f5Rocket.qplug        Generated installable plugin
-tools/f5Rocket_Keyboard.cpp     Windows QDS Emulate keyboard-bridge source
-tools/f5Rocket_Keyboard.exe     Standalone Windows x64 keyboard bridge
-.vscode/tasks.json              Default production build task
-asset_map.json                  Machine-readable asset/runtime metadata
-README_ASSETS.txt               Human-readable asset inventory
+assets/                                  Production PNG artwork
+qsys/plugins/game/                       Authoritative modular Lua source
+qsys/plugins/game/generated/             Deterministic generated asset data
+qsys/control-scripts/f5Rocket_USB_Keyboard.lua
+                                         Core USB-A HID keyboard controller
+qsys/tools/build.py                      Production plugin build tool
+qsys/dist/f5Rocket.qplug                 Generated installable plugin
+tools/f5Rocket_Keyboard.cpp              Windows QDS Emulate keyboard-bridge source
+tools/f5Rocket_Keyboard.exe              Standalone Windows x64 keyboard bridge
+.vscode/tasks.json                       Default production build task
+asset_map.json                           Machine-readable asset/runtime metadata
+README_ASSETS.txt                        Human-readable asset inventory
 ```
 
 See [qsys/README.md](qsys/README.md) for source-module and Q-SYS validation details.
