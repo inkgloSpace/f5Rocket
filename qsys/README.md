@@ -16,6 +16,10 @@ qsys/plugins/game/
 ├── game/                   State and deterministic gameplay modules
 ├── renderer/               SVG asset, parallax, and frame rendering
 └── generated/              Generated PNG data; do not edit
+
+qsys/control-scripts/
+└── f5Rocket_USB_Keyboard.lua
+                             Standalone Core USB-A HID keyboard controller
 ```
 
 The game modules cover configuration, state, player movement, bullets, enemies, bosses, collision, explosions, stages, and parallax. Rendering remains separate from gameplay state.
@@ -79,6 +83,55 @@ Fire
 
 Movement and Fire inputs are sampled inside the game tick. Their controls have no runtime event handlers, so simultaneous physical input remains supported.
 
+## Core USB HID keyboard controller
+
+A physical keyboard connected to a Core USB-A host port can control the game through:
+
+```text
+qsys/control-scripts/f5Rocket_USB_Keyboard.lua
+```
+
+This is a standalone Q-SYS Control Script and is not embedded into `f5Rocket.qplug`.
+
+Requirements:
+
+1. Set the f5Rocket plugin component **Code Name** to `f5Rocket`.
+2. Enable **Script Access** on the plugin component.
+3. Add a Q-SYS Control Script component to the schematic.
+4. Paste `f5Rocket_USB_Keyboard.lua` into the Control Script.
+5. Run the design on the Core.
+6. Connect a standard USB HID keyboard to a Core USB-A host port.
+
+The script uses:
+
+```text
+UsbMonitor.New("input")
+Usb.New(devnode)
+Component.New("f5Rocket")
+```
+
+It filters USB input event devices, retains each `Usb` object globally, and tracks key state by USB device plus key code. This allows correct simultaneous input even when two physical keys map to the same action.
+
+Keyboard mapping:
+
+```text
+W / Up Arrow       Up
+S / Down Arrow     Down
+A / Left Arrow     Left
+D / Right Arrow    Right
+Space              Fire
+Enter / KP Enter   Run / Restart
+P                  Pause toggle
+```
+
+Movement and Fire treat HID values 1 and 2 as held and value 0 as released. Run and Pause act only on value 1, so keyboard auto-repeat does not repeatedly restart or toggle Pause.
+
+On USB keyboard removal, held movement and Fire states from that device are released before the `Usb` object is removed.
+
+For this project, do **not** use the Q-SYS `USB Input` component alongside this direct Lua HID controller. The f5Rocket design previously observed `USB Input` interfering with direct `Usb.New()` keyboard handling.
+
+If a keyboard was already attached before the script started and it does not appear, unplug/reconnect it once so `UsbMonitor` receives the device-add event.
+
 ## Player firing limits
 
 - Normal shot interval: 5 ticks
@@ -105,3 +158,4 @@ Manual Fire and AutoFire both use the same `FirePlayerBullet` path. Failed fire 
 6. Confirm stage backgrounds scroll downward without a seam, pause with the game, and reset at stage changes.
 7. Confirm gameplay remains at 30 Hz while the background updates at 15 Hz.
 8. Confirm gameplay and background frames remain under their 64 KiB raw guards.
+9. On a real Core, test the USB HID keyboard script with W/A/S/D, arrows, Space, Enter, P, simultaneous keys, and unplug/replug cleanup.
