@@ -130,8 +130,8 @@ Player fire supports up to five rapid shots per burst. A complete burst triggers
 ## Plugin pages
 
 - `Game`: full-screen 480 × 720 gameplay presentation.
-- `Controls`: Run, Pause, eight-direction movement, Fire, and AutoFire in an explicit neutral-grey palette for consistent appearance across Q-SYS Designer themes.
-- `About`: a clean text-based game description, basic usage guide, control options, version, and project URL.
+- `Controls`: neutral-grey page and structural chrome for consistent appearance across Q-SYS Designer themes, with distinct functional colors retained for Run, Pause, movement, Fire, and AutoFire.
+- `About`: a clean text-based game description, basic usage guide, control options, version, and project URL, without GroupBoxes.
 
 ## Gameplay
 

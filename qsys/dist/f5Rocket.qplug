@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.6.5",
-  BuildVersion = "0.6.5.0",
+  Version = "0.6.6",
+  BuildVersion = "0.6.6.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -184,17 +184,18 @@ function GetControlLayout(props)
   local currentPage = props["page_index"].Value
 
   local COLORS = {
-    Background = { 96, 96, 96 },
-    Panel = { 112, 112, 112 },
-    PanelStroke = { 145, 145, 145 },
-    Text = { 238, 238, 238 },
+    Background = { 92, 92, 92 },
+    Panel = { 108, 108, 108 },
+    PanelStroke = { 135, 135, 135 },
+    Text = { 235, 235, 235 },
     MutedText = { 205, 205, 205 },
-    Button = { 128, 128, 128 },
-    ButtonSecondary = { 112, 112, 112 },
-    ButtonHighlight = { 150, 150, 150 },
     ButtonText = { 32, 32, 32 },
-    AboutText = { 128, 128, 128 },
-    AboutMuted = { 150, 150, 150 }
+    Movement = { 70, 120, 180 },
+    Run = { 70, 230, 225 },
+    Pause = { 245, 166, 35 },
+    Fire = { 255, 92, 157 },
+    AboutText = { 235, 235, 235 },
+    AboutMuted = { 205, 205, 205 }
   }
 
   local function AddPageBackground()
@@ -240,8 +241,8 @@ function GetControlLayout(props)
     })
   end
 
-  local function AddButton(name, prettyName, x, y, width, height, legend, color, style, offColor)
-    local buttonLayout = {
+  local function AddButton(name, prettyName, x, y, width, height, legend, color, style)
+    layout[name] = {
       PrettyName = prettyName,
       Style = "Button",
       ButtonStyle = style or "Momentary",
@@ -254,13 +255,6 @@ function GetControlLayout(props)
       FontSize = 11,
       CornerRadius = 6
     }
-
-    if offColor ~= nil then
-      buttonLayout.OffColor = offColor
-      buttonLayout.UnlinkOffColor = true
-    end
-
-    layout[name] = buttonLayout
   end
 
   if currentPage == 1 then
@@ -300,28 +294,22 @@ function GetControlLayout(props)
     AddStaticText("f5ROCKET CONTROLS", 24, 16, 432, 28, 18, COLORS.Text, true)
 
     AddGroup("SYSTEM", 24, 54, 432, 100)
-    AddButton("Run", "Controls~Run", 44, 92, 184, 42, "RUN", COLORS.ButtonHighlight, "Momentary")
-    AddButton(
-      "Pause", "Controls~Pause", 252, 92, 184, 42, "PAUSE",
-      COLORS.ButtonHighlight, "Toggle", COLORS.ButtonSecondary
-    )
+    AddButton("Run", "Controls~Run", 44, 92, 184, 42, "RUN", COLORS.Run, "Momentary")
+    AddButton("Pause", "Controls~Pause", 252, 92, 184, 42, "PAUSE", COLORS.Pause, "Toggle")
 
     AddGroup("MOVEMENT", 24, 174, 432, 280)
-    AddButton("UpLeft", "Controls~Up Left", 96, 216, 80, 58, "UL", COLORS.Button)
-    AddButton("Up", "Controls~Up", 200, 216, 80, 58, "UP", COLORS.Button)
-    AddButton("UpRight", "Controls~Up Right", 304, 216, 80, 58, "UR", COLORS.Button)
-    AddButton("Left", "Controls~Left", 96, 294, 80, 58, "LEFT", COLORS.Button)
-    AddButton("Right", "Controls~Right", 304, 294, 80, 58, "RIGHT", COLORS.Button)
-    AddButton("DownLeft", "Controls~Down Left", 96, 372, 80, 58, "DL", COLORS.Button)
-    AddButton("Down", "Controls~Down", 200, 372, 80, 58, "DOWN", COLORS.Button)
-    AddButton("DownRight", "Controls~Down Right", 304, 372, 80, 58, "DR", COLORS.Button)
+    AddButton("UpLeft", "Controls~Up Left", 96, 216, 80, 58, "UL", COLORS.Movement)
+    AddButton("Up", "Controls~Up", 200, 216, 80, 58, "UP", COLORS.Movement)
+    AddButton("UpRight", "Controls~Up Right", 304, 216, 80, 58, "UR", COLORS.Movement)
+    AddButton("Left", "Controls~Left", 96, 294, 80, 58, "LEFT", COLORS.Movement)
+    AddButton("Right", "Controls~Right", 304, 294, 80, 58, "RIGHT", COLORS.Movement)
+    AddButton("DownLeft", "Controls~Down Left", 96, 372, 80, 58, "DL", COLORS.Movement)
+    AddButton("Down", "Controls~Down", 200, 372, 80, 58, "DOWN", COLORS.Movement)
+    AddButton("DownRight", "Controls~Down Right", 304, 372, 80, 58, "DR", COLORS.Movement)
 
     AddGroup("WEAPONS", 24, 474, 432, 120)
-    AddButton("Fire", "Controls~Fire", 44, 514, 184, 58, "FIRE", COLORS.ButtonHighlight, "Momentary")
-    AddButton(
-      "AutoFire", "Controls~Auto Fire", 252, 514, 184, 58, "AUTO FIRE",
-      COLORS.ButtonHighlight, "Toggle", COLORS.ButtonSecondary
-    )
+    AddButton("Fire", "Controls~Fire", 44, 514, 184, 58, "FIRE", COLORS.Fire, "Momentary")
+    AddButton("AutoFire", "Controls~Auto Fire", 252, 514, 184, 58, "AUTO FIRE", COLORS.Fire, "Toggle")
 
     AddGroup("INPUT HELP", 24, 614, 432, 86)
     AddStaticText(
