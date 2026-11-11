@@ -135,8 +135,9 @@ elseif currentPage == 2 then
   )
 
 elseif currentPage == 3 then
-  -- About intentionally uses typography only: no page background GroupBox,
-  -- section GroupBoxes, cards, or runtime controls.
+  -- About shares the Controls page background but uses no visible section
+  -- GroupBoxes, cards, or runtime controls.
+  AddPageBackground()
   AddStaticText("f5Rocket", 24, 24, 432, 40, 28, COLORS.AboutText, true)
   AddStaticText("Version " .. PluginInfo.Version, 24, 70, 432, 20, 12, COLORS.AboutMuted, false)
   AddStaticText(

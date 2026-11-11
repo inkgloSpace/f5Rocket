@@ -131,7 +131,7 @@ Player fire supports up to five rapid shots per burst. A complete burst triggers
 
 - `Game`: full-screen 480 × 720 gameplay presentation.
 - `Controls`: neutral-grey page and structural chrome for consistent appearance across Q-SYS Designer themes, with distinct functional colors retained for Run, Pause, movement, Fire, and AutoFire.
-- `About`: a clean text-based game description, basic usage guide, control options, version, and project URL, without GroupBoxes.
+- `About`: the same explicit neutral-grey page background as Controls, with a clean text-based game description, basic usage guide, control options, version, and project URL. It has no visible GroupBox or card sections.
 
 ## Gameplay
 

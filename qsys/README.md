@@ -73,9 +73,9 @@ The plugin UI is split into three pages:
 
 - Page 1 — `Game`: only the aligned 480 × 720 background and gameplay viewports.
 - Page 2 — `Controls`: neutral-grey structural background, panels, and borders with distinct functional colors retained for Run, Pause, eight-direction touch movement, Fire, and AutoFire.
-- Page 3 — `About`: static text-only description, operating help, control options, version, and project URL, without GroupBoxes.
+- Page 3 — `About`: the same neutral-grey page background as Controls, with static text-only description, operating help, control options, version, and project URL, and no visible GroupBox or card sections.
 
-Controls-page background and structural chrome use explicit neutral RGB values instead of relying on Q-SYS Designer theme defaults. Functional buttons retain distinct accent colors and high-contrast legends. The About page uses a static text-only layout over the normal Designer page background and contains no GroupBoxes.
+Controls and About use the same explicit neutral-grey full-page background instead of relying on Q-SYS Designer theme defaults. Controls retains neutral structural panels plus distinct functional button colors and high-contrast legends. About uses only one borderless background surface and static typography; it has no visible GroupBox or card sections.
 
 The former Status text control was intentionally removed because READY, PAUSED, Game Over, Mission Complete, and stage feedback are already rendered inside the gameplay viewport. Input pins remain exposed for:
 

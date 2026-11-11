@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.6.6",
-  BuildVersion = "0.6.6.0",
+  Version = "0.6.7",
+  BuildVersion = "0.6.7.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -318,8 +318,9 @@ function GetControlLayout(props)
     )
 
   elseif currentPage == 3 then
-    -- About intentionally uses typography only: no page background GroupBox,
-    -- section GroupBoxes, cards, or runtime controls.
+    -- About shares the Controls page background but uses no visible section
+    -- GroupBoxes, cards, or runtime controls.
+    AddPageBackground()
     AddStaticText("f5Rocket", 24, 24, 432, 40, 28, COLORS.AboutText, true)
     AddStaticText("Version " .. PluginInfo.Version, 24, 70, 432, 20, 12, COLORS.AboutMuted, false)
     AddStaticText(
