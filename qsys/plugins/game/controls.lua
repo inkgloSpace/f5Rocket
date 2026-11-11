@@ -123,10 +123,3 @@ table.insert(controls, {
   DefaultValue = false,
   Count = 1
 })
-
-table.insert(controls, {
-  Name = "Status",
-  ControlType = "Text",
-  DefaultValue = "READY",
-  Count = 1
-})

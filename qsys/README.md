@@ -9,8 +9,8 @@ qsys/plugins/game/
 ├── plugin.lua              Include-based entry point
 ├── info.lua                Plugin identity and version
 ├── controls.lua            UI controls and input-pin metadata
-├── layout.lua              480 × 720 game presentation and controls
-├── pages.lua               Game page
+├── layout.lua              Three 480 × 720 page layouts
+├── pages.lua               Game, Controls, and About pages
 ├── properties.lua          Design-time properties
 ├── runtime.lua             Timer, input, lifecycle, and Legend assignment
 ├── game/                   State and deterministic gameplay modules
@@ -69,7 +69,13 @@ The player PNGs are optimized 160 × 240 sources. They render at 56 × 84 logica
 
 ## Controls and input pins
 
-The page provides Run, Pause, eight-direction touch movement, Fire, AutoFire, and Status. Input pins are exposed for:
+The plugin UI is split into three pages:
+
+- Page 1 — `Game`: only the aligned 480 × 720 background and gameplay viewports.
+- Page 2 — `Controls`: Run, Pause, eight-direction touch movement, Fire, AutoFire, and keyboard help.
+- Page 3 — `About`: static description, operating help, control options, version, and project URL.
+
+The former Status text control was intentionally removed because READY, PAUSED, Game Over, Mission Complete, and stage feedback are already rendered inside the gameplay viewport. Input pins remain exposed for:
 
 ```text
 Run
@@ -82,6 +88,8 @@ Fire
 ```
 
 Movement and Fire inputs are sampled inside the game tick. Their controls have no runtime event handlers, so simultaneous physical input remains supported.
+
+For Q-SYS Designer Emulate on Windows, `tools/f5Rocket_Keyboard.exe` connects to QRC at `127.0.0.1:1710`; its tracked source is `tools/f5Rocket_Keyboard.cpp`, and `.github/workflows/build-keyboard-bridge.yml` rebuilds the executable. Both the Windows bridge and the Core USB controller require the plugin component Code Name `f5Rocket`; the Core path also requires Script Access.
 
 ## Core USB HID keyboard controller
 

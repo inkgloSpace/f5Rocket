@@ -126,6 +126,12 @@ Q-SYS input pins are exposed for `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, 
 
 Player fire supports up to five rapid shots per burst. A complete burst triggers a one-second recovery cooldown. If no successful shot occurs for 0.5 seconds, a partial burst resets automatically. Manual Fire and AutoFire share this limiter.
 
+## Plugin pages
+
+- `Game`: full-screen 480 × 720 gameplay presentation.
+- `Controls`: Run, Pause, eight-direction movement, Fire, and AutoFire.
+- `About`: game description, operating instructions, keyboard options, version, and project URL.
+
 ## Gameplay
 
 - Easy wave: 5,000 stage points, then Mini Boss 1
@@ -158,6 +164,8 @@ qsys/tools/build.py                      Production plugin build tool
 qsys/dist/f5Rocket.qplug                 Generated installable plugin
 tools/f5Rocket_Keyboard.cpp              Windows QDS Emulate keyboard-bridge source
 tools/f5Rocket_Keyboard.exe              Standalone Windows x64 keyboard bridge
+.github/workflows/build-keyboard-bridge.yml
+                                         Windows bridge build workflow
 .vscode/tasks.json                       Default production build task
 asset_map.json                           Machine-readable asset/runtime metadata
 README_ASSETS.txt                        Human-readable asset inventory

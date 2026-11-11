@@ -265,7 +265,6 @@ local function StartGame()
   backgroundRenderCounter = 0
   RenderBackgroundFrame()
   RenderGameFrame()
-  Controls.Status.String = "RUNNING"
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
 end
 
@@ -275,7 +274,6 @@ local function StopGame()
   gameState.running = false
   gameState.paused = false
   Controls.Pause.Boolean = false
-  Controls.Status.String = "STOPPED"
 end
 
 local function PauseGame()
@@ -287,7 +285,6 @@ local function PauseGame()
   GameTimer:Stop()
   gameState.paused = true
   RenderGameFrame()
-  Controls.Status.String = "PAUSED"
 end
 
 local function ResumeGame()
@@ -301,7 +298,6 @@ local function ResumeGame()
   backgroundRenderCounter = 0
   RenderBackgroundFrame()
   RenderGameFrame()
-  Controls.Status.String = "RUNNING"
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
 end
 
@@ -349,7 +345,6 @@ Controls.Pause.Boolean = false
 backgroundRenderCounter = 0
 RenderBackgroundFrame()
 RenderGameFrame()
-Controls.Status.String = "READY"
 
 local missingAssets = MissingAssetList()
 if missingAssets ~= "" then
