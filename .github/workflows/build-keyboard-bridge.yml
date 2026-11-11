@@ -1,0 +1,50 @@
+name: Build f5Rocket Keyboard Bridge
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/f5Rocket_Keyboard.cpp"
+      - ".github/workflows/build-keyboard-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build standalone Windows x64 EXE
+        shell: pwsh
+        run: |
+          cl /nologo /EHsc /O2 /MT /std:c++17 /Fo:"$env:TEMP\\f5Rocket_Keyboard.obj" /Fe:"tools\\f5Rocket_Keyboard.exe" "tools\\f5Rocket_Keyboard.cpp" Ws2_32.lib User32.lib
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Report binary
+        shell: pwsh
+        run: |
+          Get-Item "tools\\f5Rocket_Keyboard.exe" | Format-List Name,Length
+          Get-FileHash "tools\\f5Rocket_Keyboard.exe" -Algorithm SHA256
+
+      - name: Commit rebuilt EXE
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "tools/f5Rocket_Keyboard.exe"
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "EXE is already up to date."
+            exit 0
+          }
+          git commit -m "build: update Windows keyboard bridge"
+          git push origin HEAD:main
