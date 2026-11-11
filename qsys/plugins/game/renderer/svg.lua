@@ -50,7 +50,11 @@ local function AppendEnemyBullet(parts, bullet)
 end
 
 local function AppendPlayer(parts, player)
-  AppendDefinitionUse(parts, ResolvePlayerDefinition(player.direction), player.x, player.y)
+  local renderX = player.x - math.floor(
+    (GAME_CONFIG.PlayerRenderWidth - player.width) / 2
+  )
+  local renderY = player.y - (GAME_CONFIG.PlayerRenderHeight - player.height)
+  AppendDefinitionUse(parts, ResolvePlayerDefinition(player.direction), renderX, renderY)
 end
 
 local function AppendExplosion(parts, explosion)
@@ -143,9 +147,9 @@ local function BuildGameSvg(state)
   AppendHud(parts, state)
 
   if state.gameOver then
-    AppendCenteredOverlay(parts, "GAME OVER", state.score, "TOGGLE RUN TO RESTART")
+    AppendCenteredOverlay(parts, "GAME OVER", state.score, "PRESS RUN TO RESTART")
   elseif state.gameClear then
-    AppendCenteredOverlay(parts, "MISSION COMPLETE", state.score, "TOGGLE RUN TO RESTART")
+    AppendCenteredOverlay(parts, "MISSION COMPLETE", state.score, "PRESS RUN TO RESTART")
   elseif state.paused then
     parts[#parts + 1] = "<rect x=\"78\" y=\"205\" width=\"164\" height=\"62\" fill=\"#07101f\" stroke=\"#f5a623\"/>"
     parts[#parts + 1] = "<text x=\"160\" y=\"244\" fill=\"#f5a623\" font-family=\"monospace\" font-size=\"18\" text-anchor=\"middle\">PAUSED</text>"
@@ -153,7 +157,7 @@ local function BuildGameSvg(state)
     parts[#parts + 1] = "<rect x=\"60\" y=\"205\" width=\"200\" height=\"62\" fill=\"#07101f\" stroke=\"#46e6e1\"/>"
     parts[#parts + 1] = "<text x=\"160\" y=\"244\" fill=\"#46e6e1\" font-family=\"monospace\" font-size=\"18\" text-anchor=\"middle\">STAGE CLEAR</text>"
   elseif not state.running then
-    parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"14\" text-anchor=\"middle\">ENABLE RUN</text>"
+    parts[#parts + 1] = "<text x=\"160\" y=\"246\" fill=\"#d7f7ff\" font-family=\"monospace\" font-size=\"14\" text-anchor=\"middle\">PRESS RUN</text>"
   end
 
   parts[#parts + 1] = "</svg>"

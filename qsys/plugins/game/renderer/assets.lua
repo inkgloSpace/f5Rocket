@@ -1,12 +1,10 @@
 local ASSET_MANIFEST = {
-  { Id = "player_idle", Source = "assets/player/player_idle.png", Width = 40, Height = 48 },
-  { Id = "player_left", Source = "assets/player/player_left.png", Width = 40, Height = 48 },
-  { Id = "player_right", Source = "assets/player/player_right.png", Width = 40, Height = 48 },
+  { Id = "player_idle", Source = "assets/player/player_idle.png", Width = GAME_CONFIG.PlayerRenderWidth, Height = GAME_CONFIG.PlayerRenderHeight },
+  { Id = "player_left", Source = "assets/player/player_left.png", Width = GAME_CONFIG.PlayerRenderWidth, Height = GAME_CONFIG.PlayerRenderHeight },
+  { Id = "player_right", Source = "assets/player/player_right.png", Width = GAME_CONFIG.PlayerRenderWidth, Height = GAME_CONFIG.PlayerRenderHeight },
   { Id = "enemy_easy", Source = "assets/enemy/enemy_easy.png", Width = 34, Height = 34 },
   { Id = "enemy_medium", Source = "assets/enemy/enemy_medium.png", Width = 34, Height = 34 },
   { Id = "enemy_hard", Source = "assets/enemy/enemy_hard.png", Width = 34, Height = 34 },
-  { Id = "bullet_player", Source = "assets/bullet/player_bullet.png", Width = 8, Height = 16 },
-  { Id = "bullet_enemy", Source = "assets/bullet/enemy_bullet.png", Width = 8, Height = 16 },
   { Id = "explosion_01", Source = "assets/explosion/explosion_01.png", Width = 44, Height = 44 },
   { Id = "explosion_02", Source = "assets/explosion/explosion_02.png", Width = 44, Height = 44 },
   { Id = "explosion_03", Source = "assets/explosion/explosion_03.png", Width = 44, Height = 44 },
@@ -15,19 +13,15 @@ local ASSET_MANIFEST = {
   { Id = "final_boss", Source = "assets/boss/final_boss.png", Width = 120, Height = 80 },
   { Id = "background_easy", Source = "assets/background/background_easy.png", Width = 320, Height = 480 },
   { Id = "background_medium", Source = "assets/background/background_medium.png", Width = 320, Height = 480 },
-  { Id = "background_hard", Source = "assets/background/background_hard.png", Width = 320, Height = 480 },
-  { Id = "qsys_q_mark", Source = "assets/branding/qsys_q_mark.png", Width = 64, Height = 64 },
-  { Id = "enemy_01", Source = "assets/enemy/enemy_01.png", Width = 34, Height = 34 },
-  { Id = "background_tile", Source = "assets/background/background_tile.png", Width = 320, Height = 480 }
+  { Id = "background_hard", Source = "assets/background/background_hard.png", Width = 320, Height = 480 }
 }
 
 local DYNAMIC_GAMEPLAY_ASSETS = GENERATED_DYNAMIC_GAMEPLAY_ASSET_IDS
 local STATIC_BACKGROUND_ASSETS = GENERATED_STATIC_BACKGROUND_ASSET_IDS
-local BRANDING_ASSETS = GENERATED_BRANDING_ASSET_IDS
 
 local FALLBACK_PLAYER_DEFINITION =
-  "<g id=\"fallback_player\"><polygon points=\"20,0 39,44 25,38 20,48 15,38 1,44\" fill=\"#46e6e1\"/>" ..
-  "<rect x=\"16\" y=\"17\" width=\"8\" height=\"20\" fill=\"#ffffff\"/></g>"
+  "<g id=\"fallback_player\"><polygon points=\"28,0 55,76 36,68 28,84 20,68 1,76\" fill=\"#46e6e1\"/>" ..
+  "<rect x=\"23\" y=\"28\" width=\"10\" height=\"35\" fill=\"#ffffff\"/></g>"
 
 local FALLBACK_ENEMY_DEFINITION =
   "<g id=\"fallback_enemy\"><rect width=\"34\" height=\"34\" fill=\"#ff5c68\"/>" ..
@@ -35,20 +29,18 @@ local FALLBACK_ENEMY_DEFINITION =
 
 local PLAYER_BULLET_VISIBLE_DEFINITION =
   "<g id=\"player_bullet_visible\">" ..
-  "<rect x=\"0\" y=\"0\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#071827\"/>" ..
-  "<rect x=\"1\" y=\"1\" width=\"6\" height=\"14\" rx=\"3\" fill=\"#23d9ff\"/>" ..
-  "<rect x=\"2\" y=\"2\" width=\"4\" height=\"12\" rx=\"2\" fill=\"#8ff8ff\"/>" ..
-  "<rect x=\"3\" y=\"3\" width=\"2\" height=\"9\" fill=\"#ffffff\"/>" ..
+  "<rect x=\"0\" y=\"0\" width=\"6\" height=\"14\" rx=\"2\" fill=\"#071827\"/>" ..
+  "<rect x=\"1\" y=\"1\" width=\"4\" height=\"12\" rx=\"2\" fill=\"#23d9ff\"/>" ..
+  "<rect x=\"2\" y=\"2\" width=\"2\" height=\"9\" fill=\"#ffffff\"/>" ..
   "</g>"
 
--- Hostile shots deliberately use SVG geometry rather than the small source
--- PNG so their silhouette and hot core remain readable on every stage.
+-- Hostile shots use SVG geometry so their silhouette and hot core remain
+-- readable on every stage without embedding a separate PNG.
 local ENEMY_BULLET_VISIBLE_DEFINITION =
   "<g id=\"enemy_bullet_visible\">" ..
-  "<rect x=\"0\" y=\"0\" width=\"8\" height=\"16\" rx=\"3\" fill=\"#160811\"/>" ..
-  "<rect x=\"1\" y=\"1\" width=\"6\" height=\"14\" rx=\"3\" fill=\"#ff315f\"/>" ..
-  "<rect x=\"2\" y=\"2\" width=\"4\" height=\"12\" rx=\"2\" fill=\"#ffad2f\"/>" ..
-  "<rect x=\"3\" y=\"3\" width=\"2\" height=\"9\" fill=\"#ffffff\"/>" ..
+  "<rect x=\"0\" y=\"0\" width=\"6\" height=\"14\" rx=\"2\" fill=\"#160811\"/>" ..
+  "<rect x=\"1\" y=\"1\" width=\"4\" height=\"12\" rx=\"2\" fill=\"#ff315f\"/>" ..
+  "<rect x=\"2\" y=\"2\" width=\"2\" height=\"9\" fill=\"#ffffff\"/>" ..
   "</g>"
 
 local FALLBACK_EXPLOSION_DEFINITION =

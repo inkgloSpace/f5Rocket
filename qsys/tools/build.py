@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build f5Rocket Q-SYS plugins from Q-SYS-style include directives."""
+"""Build the production f5Rocket Q-SYS plugin."""
 
 from __future__ import annotations
 
@@ -16,23 +16,9 @@ PLUGINS_DIR = QSYS_DIR / "plugins"
 DIST_DIR = QSYS_DIR / "dist"
 GAME_GENERATED_ASSETS = PLUGINS_DIR / "game" / "generated" / "assets_data.lua"
 
-TARGETS = {
-    "compat": {
-        "source_root": PLUGINS_DIR / "compat",
-        "entry": PLUGINS_DIR / "compat" / "plugin.lua",
-        "output": DIST_DIR / "f5Rocket_Compat.qplug",
-    },
-    "game": {
-        "source_root": PLUGINS_DIR / "game",
-        "entry": PLUGINS_DIR / "game" / "plugin.lua",
-        "output": DIST_DIR / "f5Rocket.qplug",
-    },
-    "runtime_probe": {
-        "source_root": PLUGINS_DIR / "runtime_probe",
-        "entry": PLUGINS_DIR / "runtime_probe" / "plugin.lua",
-        "output": DIST_DIR / "f5Rocket_RuntimeProbe.qplug",
-    },
-}
+GAME_SOURCE_ROOT = PLUGINS_DIR / "game"
+GAME_ENTRY = GAME_SOURCE_ROOT / "plugin.lua"
+GAME_OUTPUT = DIST_DIR / "f5Rocket.qplug"
 
 DYNAMIC_GAMEPLAY_ASSETS = (
     ("player_idle", "assets/player/player_idle.png"),
@@ -41,8 +27,6 @@ DYNAMIC_GAMEPLAY_ASSETS = (
     ("enemy_easy", "assets/enemy/enemy_easy.png"),
     ("enemy_medium", "assets/enemy/enemy_medium.png"),
     ("enemy_hard", "assets/enemy/enemy_hard.png"),
-    ("bullet_player", "assets/bullet/player_bullet.png"),
-    ("bullet_enemy", "assets/bullet/enemy_bullet.png"),
     ("explosion_01", "assets/explosion/explosion_01.png"),
     ("explosion_02", "assets/explosion/explosion_02.png"),
     ("explosion_03", "assets/explosion/explosion_03.png"),
@@ -57,20 +41,9 @@ STATIC_BACKGROUND_ASSETS = (
     ("background_hard", "assets/background/background_hard.png"),
 )
 
-BRANDING_ASSETS = (
-    ("qsys_q_mark", "assets/branding/qsys_q_mark.png"),
-)
-
-COMPATIBILITY_ALIAS_ASSETS = (
-    ("enemy_01", "assets/enemy/enemy_01.png"),
-    ("background_tile", "assets/background/background_tile.png"),
-)
-
 ASSET_GROUPS = (
     ("DYNAMIC_GAMEPLAY_ASSET_IDS", DYNAMIC_GAMEPLAY_ASSETS),
     ("STATIC_BACKGROUND_ASSET_IDS", STATIC_BACKGROUND_ASSETS),
-    ("BRANDING_ASSET_IDS", BRANDING_ASSETS),
-    ("COMPATIBILITY_ALIAS_ASSET_IDS", COMPATIBILITY_ALIAS_ASSETS),
 )
 
 ASSET_MANIFEST = tuple(
@@ -163,7 +136,7 @@ def generate_game_assets() -> None:
     lines = [
         "-- GENERATED FILE - DO NOT EDIT.\n",
         "-- Source: root assets/ PNG manifest in qsys/tools/build.py\n",
-        "-- Rebuild with: python3 qsys/tools/build.py game\n\n",
+        "-- Rebuild with: python3 qsys/tools/build.py\n\n",
         "local GENERATED_ASSET_DATA = {\n",
     ]
     available_count = 0
@@ -235,43 +208,33 @@ def generated_header(entry: Path) -> str:
     )
 
 
-def build_target(name: str) -> None:
-    target = TARGETS[name]
-    if name == "game":
-        generate_game_assets()
+def build_game() -> None:
+    generate_game_assets()
 
-    entry = target["entry"]
-    expanded = expand_file(entry, target["source_root"])
+    expanded = expand_file(GAME_ENTRY, GAME_SOURCE_ROOT)
     if "#include" in expanded:
-        raise BuildError(
-            f"{name} output contains an unresolved or malformed #include"
-        )
+        raise BuildError("output contains an unresolved or malformed #include")
 
-    output = (generated_header(entry) + expanded).encode("utf-8")
-    output_path = target["output"]
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(output)
+    output = (generated_header(GAME_ENTRY) + expanded).encode("utf-8")
+    GAME_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    GAME_OUTPUT.write_bytes(output)
 
-    relative_output = output_path.relative_to(REPO_ROOT)
+    relative_output = GAME_OUTPUT.relative_to(REPO_ROOT)
     print(f"Built {relative_output} ({len(output)} bytes)")
 
 
-def selected_targets(arguments: list[str]) -> tuple[str, ...]:
+def validate_arguments(arguments: list[str]) -> None:
     if len(arguments) > 1:
-        raise BuildError("usage: build.py [all|compat|game|runtime_probe]")
+        raise BuildError("usage: build.py [game]")
 
-    selected = arguments[0] if arguments else "all"
-    if selected == "all":
-        return ("compat", "game", "runtime_probe")
-    if selected not in TARGETS:
-        raise BuildError(f"unknown build target: {selected}")
-    return (selected,)
+    if arguments and arguments[0] != "game":
+        raise BuildError(f"unknown build target: {arguments[0]}")
 
 
 def main() -> int:
     try:
-        for target_name in selected_targets(sys.argv[1:]):
-            build_target(target_name)
+        validate_arguments(sys.argv[1:])
+        build_game()
         return 0
     except BuildError as error:
         print(f"Build failed: {error}", file=sys.stderr)

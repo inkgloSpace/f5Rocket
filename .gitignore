@@ -7,9 +7,7 @@ __pycache__/
 !.vscode/
 .vscode/*
 !.vscode/tasks.json
-node_modules/
 dist/
 !qsys/dist/
-!qsys/dist/f5Rocket_Compat.qplug
 !qsys/dist/f5Rocket.qplug
 *.log
