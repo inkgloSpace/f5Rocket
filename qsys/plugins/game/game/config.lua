@@ -24,6 +24,9 @@ local GAME_CONFIG = {
   PlayerBulletHeight = 14,
   PlayerBulletSpeed = 10,
   FireIntervalTicks = 5,
+  MaxBurstShots = 5,
+  BurstCooldownTicks = 30,
+  BurstResetTicks = 15,
 
   EnemyWidth = 34,
   EnemyHeight = 34,

@@ -1,6 +1,28 @@
+local function UpdatePlayerBurstState(state)
+  local player = state.player
+  if not player.alive then
+    return
+  end
+
+  if player.burstCooldown > 0 then
+    player.burstCooldown = player.burstCooldown - 1
+    return
+  end
+
+  if player.burstShots > 0 then
+    player.burstIdleTicks = player.burstIdleTicks + 1
+    if player.burstIdleTicks >= GAME_CONFIG.BurstResetTicks then
+      player.burstShots = 0
+      player.burstIdleTicks = 0
+    end
+  end
+end
+
 local function FirePlayerBullet(state)
   local player = state.player
-  if not player.alive or player.fireCooldown > 0 then
+  if not player.alive or
+      player.fireCooldown > 0 or
+      player.burstCooldown > 0 then
     return false
   end
 
@@ -11,6 +33,15 @@ local function FirePlayerBullet(state)
       bullet.x = math.floor(player.x + (player.width - bullet.width) / 2)
       bullet.y = player.y - bullet.height
       player.fireCooldown = GAME_CONFIG.FireIntervalTicks
+      player.burstShots = player.burstShots + 1
+      player.burstIdleTicks = 0
+
+      if player.burstShots >= GAME_CONFIG.MaxBurstShots then
+        player.burstCooldown = GAME_CONFIG.BurstCooldownTicks
+        player.burstShots = 0
+        player.burstIdleTicks = 0
+      end
+
       return true
     end
   end

@@ -31,11 +31,13 @@ Generated files must not be edited manually.
 - `Run`: momentary start/restart pulse
 - `Pause`: pause/resume toggle
 - `Up`, `Down`, `Left`, `Right`: cardinal movement
-- `Fire`: held fire using the normal cooldown
+- `Fire`: held fire using the shared burst limiter
 - `UL`, `UR`, `DL`, `DR`: touch-friendly diagonal movement
-- `AutoFire`: continuous fire using the normal cooldown
+- `AutoFire`: continuous fire using the same burst limiter as manual Fire
 
 Q-SYS input pins are exposed for `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, and `Fire`. Physical inputs can be combined in the same tick. Cardinal chord assist preserves diagonal intent for touch interfaces.
+
+Player fire supports up to five rapid shots per burst. A complete burst triggers a one-second recovery cooldown. If no successful shot occurs for 0.5 seconds, a partial burst resets automatically. Manual Fire and AutoFire share this limiter.
 
 ## Gameplay
 

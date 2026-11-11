@@ -206,6 +206,8 @@ local function UpdateGameState()
     downPressed
   )
 
+  UpdatePlayerBurstState(gameState)
+
   if firePressed then
     FirePlayerBullet(gameState)
   end

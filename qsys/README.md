@@ -79,6 +79,15 @@ Fire
 
 Movement and Fire inputs are sampled inside the game tick. Their controls have no runtime event handlers, so simultaneous physical input remains supported.
 
+## Player firing limits
+
+- Normal shot interval: 5 ticks
+- Maximum burst: 5 successful shots
+- Full-burst cooldown: 30 ticks / 1 second
+- Partial-burst reset: 15 ticks / 0.5 second without a successful shot
+
+Manual Fire and AutoFire both use the same `FirePlayerBullet` path. Failed fire requests do not increment the burst counter.
+
 ## Asset constraints
 
 - Keep hot-frame PNGs compact; their data URIs are repeated inside each dynamic SVG payload.

@@ -157,6 +157,9 @@ local function ResetGameState(state)
   state.player.height = GAME_CONFIG.PlayerHeight
   state.player.direction = "idle"
   state.player.fireCooldown = 0
+  state.player.burstShots = 0
+  state.player.burstCooldown = 0
+  state.player.burstIdleTicks = 0
   state.player.alive = true
 
   local boss = state.boss
