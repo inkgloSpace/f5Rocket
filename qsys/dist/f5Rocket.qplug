@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.6.7",
-  BuildVersion = "0.6.7.0",
+  Version = "0.6.8",
+  BuildVersion = "0.6.8.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -801,10 +801,9 @@ if Controls then
     "<rect x=\"18\" y=\"16\" width=\"84\" height=\"48\" fill=\"#4a1038\"/></g>"
 
   local ASSETS = {}
-  local DYNAMIC_DEFINITION_PARTS = {}
+  local ASSET_SVG_DEFINITIONS = {}
   local RUNTIME_DEFINITION_AVAILABLE = {}
   local MISSING_ASSET_PATHS = {}
-  local availableAssetCount = 0
 
   for index = 1, #ASSET_MANIFEST do
     local metadata = ASSET_MANIFEST[index]
@@ -817,15 +816,15 @@ if Controls then
       Width = metadata.Width,
       Height = metadata.Height,
       Available = available,
-      DataUri = available and generated.DataUri or "",
+      DataUri = available and STATIC_BACKGROUND_ASSETS[metadata.Id] and
+        generated.DataUri or "",
       SourceBytes = available and generated.SourceBytes or 0,
       EncodedBytes = available and generated.EncodedBytes or 0
     }
 
     if available then
-      availableAssetCount = availableAssetCount + 1
       if DYNAMIC_GAMEPLAY_ASSETS[metadata.Id] then
-        DYNAMIC_DEFINITION_PARTS[#DYNAMIC_DEFINITION_PARTS + 1] =
+        ASSET_SVG_DEFINITIONS[metadata.Id] =
           "<image id=\"" .. metadata.Id .. "\" href=\"" .. generated.DataUri ..
           "\" width=\"" .. tostring(metadata.Width) .. "\" height=\"" ..
           tostring(metadata.Height) .. "\" preserveAspectRatio=\"none\"/>"
@@ -836,6 +835,15 @@ if Controls then
     end
   end
 
+  -- The generated table is only an initialization source. Individual dynamic
+  -- definitions and background asset records now own the strings required at
+  -- runtime, so release the original aggregate references before gameplay.
+  GENERATED_ASSET_DATA = nil
+  GENERATED_DYNAMIC_GAMEPLAY_ASSET_IDS = nil
+  GENERATED_STATIC_BACKGROUND_ASSET_IDS = nil
+  DYNAMIC_GAMEPLAY_ASSETS = nil
+  STATIC_BACKGROUND_ASSETS = nil
+
   local function RuntimeSourceId(assetId, fallbackId)
     if RUNTIME_DEFINITION_AVAILABLE[assetId] then
       return assetId
@@ -843,41 +851,51 @@ if Controls then
     return fallbackId
   end
 
-  local ENEMY_ORIENTATION_DEFINITIONS = table.concat({
-    "<g id=\"enemy_easy_down\"><use href=\"#" .. RuntimeSourceId("enemy_easy", "fallback_enemy") ..
+  local ENEMY_ORIENTATION_DEFINITIONS = {
+    enemy_easy =
+      "<g id=\"enemy_easy_down\"><use href=\"#" ..
+      RuntimeSourceId("enemy_easy", "fallback_enemy") ..
       "\" transform=\"rotate(180 17 17)\"/></g>",
-    "<g id=\"enemy_medium_down\"><use href=\"#" .. RuntimeSourceId("enemy_medium", "fallback_enemy") ..
+    enemy_medium =
+      "<g id=\"enemy_medium_down\"><use href=\"#" ..
+      RuntimeSourceId("enemy_medium", "fallback_enemy") ..
       "\" transform=\"rotate(180 17 17)\"/></g>",
-    "<g id=\"enemy_hard_down\"><use href=\"#" .. RuntimeSourceId("enemy_hard", "fallback_enemy") ..
+    enemy_hard =
+      "<g id=\"enemy_hard_down\"><use href=\"#" ..
+      RuntimeSourceId("enemy_hard", "fallback_enemy") ..
       "\" transform=\"rotate(180 17 17)\"/></g>"
-  })
+  }
 
-  local BOSS_ORIENTATION_DEFINITIONS = table.concat({
-    "<g id=\"boss_mini_easy_down\"><use href=\"#" ..
+  local BOSS_ORIENTATION_DEFINITIONS = {
+    MINI_EASY =
+      "<g id=\"boss_mini_easy_down\"><use href=\"#" ..
       RuntimeSourceId("mini_boss_easy", "fallback_boss_easy") ..
       "\" transform=\"rotate(180 36 28)\"/></g>",
-    "<g id=\"boss_mini_medium_down\"><use href=\"#" ..
+    MINI_MEDIUM =
+      "<g id=\"boss_mini_medium_down\"><use href=\"#" ..
       RuntimeSourceId("mini_boss_medium", "fallback_boss_medium") ..
       "\" transform=\"rotate(180 44 32)\"/></g>",
-    "<g id=\"boss_final_down\"><use href=\"#" ..
+    FINAL =
+      "<g id=\"boss_final_down\"><use href=\"#" ..
       RuntimeSourceId("final_boss", "fallback_boss_final") ..
       "\" transform=\"rotate(180 60 40)\"/></g>"
-  })
+  }
 
-  local DYNAMIC_GAMEPLAY_DEFINITIONS = table.concat(DYNAMIC_DEFINITION_PARTS) ..
+  local STATIC_GAMEPLAY_DEFINITIONS =
     FALLBACK_PLAYER_DEFINITION .. FALLBACK_ENEMY_DEFINITION ..
     PLAYER_BULLET_VISIBLE_DEFINITION .. ENEMY_BULLET_VISIBLE_DEFINITION ..
     FALLBACK_EXPLOSION_DEFINITION .. FALLBACK_BOSS_EASY_DEFINITION ..
-    FALLBACK_BOSS_MEDIUM_DEFINITION .. FALLBACK_BOSS_FINAL_DEFINITION ..
-    ENEMY_ORIENTATION_DEFINITIONS .. BOSS_ORIENTATION_DEFINITIONS
-
-  local function AssetAvailable(assetId)
-    local asset = ASSETS[assetId]
-    return asset ~= nil and asset.Available
-  end
+    FALLBACK_BOSS_MEDIUM_DEFINITION .. FALLBACK_BOSS_FINAL_DEFINITION
 
   local function RuntimeDefinitionAvailable(assetId)
     return RUNTIME_DEFINITION_AVAILABLE[assetId] == true
+  end
+
+  local function AppendAssetDefinition(parts, assetId)
+    local definition = ASSET_SVG_DEFINITIONS[assetId]
+    if definition ~= nil then
+      parts[#parts + 1] = definition
+    end
   end
 
   local function AppendDefinitionUse(parts, definitionId, x, y)
@@ -889,14 +907,21 @@ if Controls then
     AppendDefinitionUse(parts, RuntimeSourceId(assetId, fallbackId), x, y)
   end
 
-  local function ResolvePlayerDefinition(direction)
+  local function ResolvePlayerAssetId(direction)
     if direction == "left" and RuntimeDefinitionAvailable("player_left") then
       return "player_left"
     end
     if direction == "right" and RuntimeDefinitionAvailable("player_right") then
       return "player_right"
     end
-    return RuntimeSourceId("player_idle", "fallback_player")
+    if RuntimeDefinitionAvailable("player_idle") then
+      return "player_idle"
+    end
+    return nil
+  end
+
+  local function ResolvePlayerDefinition(direction)
+    return ResolvePlayerAssetId(direction) or "fallback_player"
   end
 
   local function ResolveBossDefinition(bossType)
@@ -908,12 +933,14 @@ if Controls then
     return "boss_final_down"
   end
 
-  local function AssetAvailabilitySummary()
-    return tostring(availableAssetCount) .. "/" .. tostring(#ASSET_MANIFEST) .. " ASSETS"
+  local function AppendEnemyFrameDefinition(parts, profile)
+    AppendAssetDefinition(parts, profile.EnemyAsset)
+    parts[#parts + 1] = ENEMY_ORIENTATION_DEFINITIONS[profile.EnemyAsset]
   end
 
-  local function DynamicGameplayDefinitionBytes()
-    return #DYNAMIC_GAMEPLAY_DEFINITIONS
+  local function AppendBossFrameDefinition(parts, boss)
+    AppendAssetDefinition(parts, boss.assetId)
+    parts[#parts + 1] = BOSS_ORIENTATION_DEFINITIONS[boss.bossType]
   end
 
   local function MissingAssetList()
@@ -2137,8 +2164,17 @@ if Controls then
 
   -- The dynamic frame is intentionally transparent. Stage artwork lives in the
   -- low-frequency BackgroundViewport and is never copied into this prefix.
-  local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" ..
-    DYNAMIC_GAMEPLAY_DEFINITIONS .. PARALLAX_SVG_DEFINITIONS .. "</defs>"
+  local GAME_SVG_DEFS_PREFIX = SVG_ROOT_OPEN .. "<defs>" ..
+    STATIC_GAMEPLAY_DEFINITIONS .. PARALLAX_SVG_DEFINITIONS
+
+  local GAME_SVG_PARTS = {}
+  local BACKGROUND_FRAME_PARTS = {}
+
+  local function ClearSvgParts(parts)
+    for index = #parts, 1, -1 do
+      parts[index] = nil
+    end
+  end
 
   local FALLBACK_BACKGROUND_COLORS = {
     [1] = "#083b69",
@@ -2146,39 +2182,67 @@ if Controls then
     [3] = "#090d2a"
   }
 
-  local function BuildStageBackgroundSvg(stageIndex, scrollY)
+  local function BuildFallbackBackgroundDefinition(stageIndex, tileHeight)
+    local parts = {
+      "<g id=\"stage_background_tile\"><rect width=\"320\" height=\"" ..
+      tostring(tileHeight) .. "\" fill=\"" ..
+      FALLBACK_BACKGROUND_COLORS[stageIndex] .. "\"/>"
+    }
+
+    for index = 1, 28 do
+      local x = (index * 47 + stageIndex * 19) % GAME_CONFIG.LogicalWidth
+      local y = (index * 83 + stageIndex * 31) % tileHeight
+      local size = 1 + (index % 2)
+      parts[#parts + 1] = "<rect x=\"" .. tostring(x) .. "\" y=\"" ..
+        tostring(y) .. "\" width=\"" .. tostring(size) .. "\" height=\"" ..
+        tostring(size) .. "\" fill=\"#d7f7ff\"/>"
+    end
+
+    parts[#parts + 1] = "</g>"
+    return table.concat(parts)
+  end
+
+  local BACKGROUND_SVG_PREFIXES = {}
+
+  for stageIndex = 1, 3 do
     local profile = STAGE_PROFILES[stageIndex]
     local asset = ASSETS[profile.BackgroundAsset]
     local tileHeight = GAME_CONFIG.BackgroundTileHeight
-    local offset = math.floor(scrollY) % tileHeight
-    local parts = { SVG_ROOT_OPEN, "<defs>" }
+    local definition
 
     if asset ~= nil and asset.Available then
-      parts[#parts + 1] = "<image id=\"stage_background_tile\" href=\"" ..
+      definition = "<image id=\"stage_background_tile\" href=\"" ..
         asset.DataUri .. "\" width=\"320\" height=\"" ..
         tostring(tileHeight) .. "\" preserveAspectRatio=\"none\"/>"
     else
-      parts[#parts + 1] = "<g id=\"stage_background_tile\"><rect width=\"320\" height=\"" ..
-        tostring(tileHeight) .. "\" fill=\"" ..
-        FALLBACK_BACKGROUND_COLORS[stageIndex] .. "\"/>"
-      for index = 1, 28 do
-        local x = (index * 47 + stageIndex * 19) % GAME_CONFIG.LogicalWidth
-        local y = (index * 83 + stageIndex * 31) % tileHeight
-        local size = 1 + (index % 2)
-        parts[#parts + 1] = "<rect x=\"" .. tostring(x) .. "\" y=\"" ..
-          tostring(y) .. "\" width=\"" .. tostring(size) .. "\" height=\"" ..
-          tostring(size) .. "\" fill=\"#d7f7ff\"/>"
-      end
-      parts[#parts + 1] = "</g>"
+      definition = BuildFallbackBackgroundDefinition(stageIndex, tileHeight)
     end
 
-    parts[#parts + 1] = "</defs>"
-    parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
-      tostring(offset - tileHeight) .. "\"/>"
-    parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
-      tostring(offset) .. "\"/>"
-    parts[#parts + 1] = "</svg>"
-    return table.concat(parts), profile.BackgroundAsset
+    BACKGROUND_SVG_PREFIXES[stageIndex] =
+      SVG_ROOT_OPEN .. "<defs>" .. definition .. "</defs>"
+
+    -- The prefix now owns the complete immutable definition, so the duplicate
+    -- DataURI reference in ASSETS is no longer needed after initialization.
+    if asset ~= nil then
+      asset.DataUri = ""
+    end
+  end
+
+  local function BuildStageBackgroundSvg(stageIndex, scrollY)
+    local profile = STAGE_PROFILES[stageIndex]
+    local tileHeight = GAME_CONFIG.BackgroundTileHeight
+    local offset = math.floor(scrollY) % tileHeight
+
+    BACKGROUND_FRAME_PARTS[1] = BACKGROUND_SVG_PREFIXES[stageIndex]
+    BACKGROUND_FRAME_PARTS[2] =
+      "<use href=\"#stage_background_tile\" x=\"0\" y=\""
+    BACKGROUND_FRAME_PARTS[3] = tostring(offset - tileHeight)
+    BACKGROUND_FRAME_PARTS[4] =
+      "\"/><use href=\"#stage_background_tile\" x=\"0\" y=\""
+    BACKGROUND_FRAME_PARTS[5] = tostring(offset)
+    BACKGROUND_FRAME_PARTS[6] = "\"/></svg>"
+
+    return table.concat(BACKGROUND_FRAME_PARTS), profile.BackgroundAsset
   end
 
   local function AppendEnemy(parts, state, enemy)
@@ -2208,6 +2272,56 @@ if Controls then
 
   local function AppendBoss(parts, boss)
     AppendDefinitionUse(parts, ResolveBossDefinition(boss.bossType), boss.x, boss.y)
+  end
+
+  local function AppendFrameAssetDefinitions(parts, state)
+    if state.player.alive then
+      local playerAssetId = ResolvePlayerAssetId(state.player.direction)
+      if playerAssetId ~= nil then
+        AppendAssetDefinition(parts, playerAssetId)
+      end
+    end
+
+    local ordinaryEnemyVisible = false
+    for index = 1, GAME_CONFIG.MaxEnemies do
+      if state.enemies[index].active then
+        ordinaryEnemyVisible = true
+        break
+      end
+    end
+    if ordinaryEnemyVisible then
+      AppendEnemyFrameDefinition(parts, GetStageProfile(state))
+    end
+
+    if state.boss.active then
+      AppendBossFrameDefinition(parts, state.boss)
+    end
+
+    local explosionFrame1 = false
+    local explosionFrame2 = false
+    local explosionFrame3 = false
+    for index = 1, GAME_CONFIG.MaxExplosions do
+      local explosion = state.explosions[index]
+      if explosion.active and explosion.delayTicks <= 0 then
+        if explosion.frame == 1 then
+          explosionFrame1 = true
+        elseif explosion.frame == 2 then
+          explosionFrame2 = true
+        elseif explosion.frame == 3 then
+          explosionFrame3 = true
+        end
+      end
+    end
+
+    if explosionFrame1 then
+      AppendAssetDefinition(parts, "explosion_01")
+    end
+    if explosionFrame2 then
+      AppendAssetDefinition(parts, "explosion_02")
+    end
+    if explosionFrame3 then
+      AppendAssetDefinition(parts, "explosion_03")
+    end
   end
 
   local function AppendHud(parts, state)
@@ -2246,7 +2360,11 @@ if Controls then
   end
 
   local function BuildGameSvg(state)
-    local parts = { GAME_SVG_PREFIX }
+    local parts = GAME_SVG_PARTS
+    ClearSvgParts(parts)
+    parts[1] = GAME_SVG_DEFS_PREFIX
+    AppendFrameAssetDefinitions(parts, state)
+    parts[#parts + 1] = "</defs>"
 
     AppendFarParallax(parts, state)
     AppendMidParallax(parts, state)
@@ -2621,6 +2739,13 @@ if Controls then
     end
 
     RenderGameFrame()
+
+    -- The final frozen scene has now been assigned. Run remains an independent
+    -- control handler, so stopping this one timer removes idle render work
+    -- without preventing a clean restart.
+    if gameState.gameOverFrozen or gameState.campaignFrozen then
+      GameTimer:Stop()
+    end
   end
 
   Controls.Run.EventHandler = function(control)

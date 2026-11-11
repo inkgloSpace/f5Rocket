@@ -312,6 +312,13 @@ GameTimer.EventHandler = function()
   end
 
   RenderGameFrame()
+
+  -- The final frozen scene has now been assigned. Run remains an independent
+  -- control handler, so stopping this one timer removes idle render work
+  -- without preventing a clean restart.
+  if gameState.gameOverFrozen or gameState.campaignFrozen then
+    GameTimer:Stop()
+  end
 end
 
 Controls.Run.EventHandler = function(control)

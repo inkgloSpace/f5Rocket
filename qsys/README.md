@@ -48,7 +48,7 @@ The standard-library-only builder:
 
 ## Generated asset data
 
-The asset generator separates dynamic gameplay sprites from seamless stage-background tiles. Dynamic PNG definitions are embedded in the 30 Hz gameplay SVG once and reused with `<use href>`. Each 320 × 480 portrait background PNG is embedded once in its own SVG `<defs>` block and repeated through two `<use href>` instances.
+The asset generator separates dynamic gameplay sprites from seamless stage-background tiles. At runtime, each 30 Hz gameplay frame embeds only the PNG definitions it actually needs: one current player direction when alive, one current-stage enemy when visible, one active boss when present, and only the unique visible explosion frames. Every required asset is defined at most once per frame, while repeated objects reuse it through `<use href>`. Each 320 × 480 portrait background PNG is embedded once in its own SVG `<defs>` block and repeated through two `<use href>` instances.
 
 The visual progression is Easy/upper atmosphere, Medium/outer space and asteroids, then Hard/inside the alien headquarters. The alien insignia belongs to the enemy faction; the Q-SYS/F5 rocket remains the player hero.
 
@@ -66,6 +66,12 @@ The player PNGs are optimized 160 × 240 sources. They render at 56 × 84 logica
 - Deterministic stage, boss, parallax, pool, and input logic
 - One gameplay SVG build, Base64 encode, and `Viewport.Legend` assignment per game frame
 - Separate 64 KiB raw-SVG safety guards for gameplay and background frames
+- Static SVG fallbacks, projectile geometry, and parallax definitions are prebuilt once
+- Dynamic PNG `<image>` definitions are prebuilt individually, then selected per frame
+- Per-stage background SVG prefixes are prebuilt; each 15 Hz frame appends only two tile positions
+- Fully frozen Game Over and Mission Complete states stop the same `GameTimer` after the final visible frame is assigned; `Run` can still restart normally
+
+This keeps simulation and gameplay rendering at 30 Hz and background rendering at 15 Hz while removing the former all-assets DataURI payload from ordinary frames. Fixed object pools, collision loops, gameplay timing, and the single-timer lifecycle remain unchanged.
 
 ## Controls and input pins
 

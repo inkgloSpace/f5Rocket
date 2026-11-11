@@ -59,10 +59,9 @@ local FALLBACK_BOSS_FINAL_DEFINITION =
   "<rect x=\"18\" y=\"16\" width=\"84\" height=\"48\" fill=\"#4a1038\"/></g>"
 
 local ASSETS = {}
-local DYNAMIC_DEFINITION_PARTS = {}
+local ASSET_SVG_DEFINITIONS = {}
 local RUNTIME_DEFINITION_AVAILABLE = {}
 local MISSING_ASSET_PATHS = {}
-local availableAssetCount = 0
 
 for index = 1, #ASSET_MANIFEST do
   local metadata = ASSET_MANIFEST[index]
@@ -75,15 +74,15 @@ for index = 1, #ASSET_MANIFEST do
     Width = metadata.Width,
     Height = metadata.Height,
     Available = available,
-    DataUri = available and generated.DataUri or "",
+    DataUri = available and STATIC_BACKGROUND_ASSETS[metadata.Id] and
+      generated.DataUri or "",
     SourceBytes = available and generated.SourceBytes or 0,
     EncodedBytes = available and generated.EncodedBytes or 0
   }
 
   if available then
-    availableAssetCount = availableAssetCount + 1
     if DYNAMIC_GAMEPLAY_ASSETS[metadata.Id] then
-      DYNAMIC_DEFINITION_PARTS[#DYNAMIC_DEFINITION_PARTS + 1] =
+      ASSET_SVG_DEFINITIONS[metadata.Id] =
         "<image id=\"" .. metadata.Id .. "\" href=\"" .. generated.DataUri ..
         "\" width=\"" .. tostring(metadata.Width) .. "\" height=\"" ..
         tostring(metadata.Height) .. "\" preserveAspectRatio=\"none\"/>"
@@ -94,6 +93,15 @@ for index = 1, #ASSET_MANIFEST do
   end
 end
 
+-- The generated table is only an initialization source. Individual dynamic
+-- definitions and background asset records now own the strings required at
+-- runtime, so release the original aggregate references before gameplay.
+GENERATED_ASSET_DATA = nil
+GENERATED_DYNAMIC_GAMEPLAY_ASSET_IDS = nil
+GENERATED_STATIC_BACKGROUND_ASSET_IDS = nil
+DYNAMIC_GAMEPLAY_ASSETS = nil
+STATIC_BACKGROUND_ASSETS = nil
+
 local function RuntimeSourceId(assetId, fallbackId)
   if RUNTIME_DEFINITION_AVAILABLE[assetId] then
     return assetId
@@ -101,41 +109,51 @@ local function RuntimeSourceId(assetId, fallbackId)
   return fallbackId
 end
 
-local ENEMY_ORIENTATION_DEFINITIONS = table.concat({
-  "<g id=\"enemy_easy_down\"><use href=\"#" .. RuntimeSourceId("enemy_easy", "fallback_enemy") ..
+local ENEMY_ORIENTATION_DEFINITIONS = {
+  enemy_easy =
+    "<g id=\"enemy_easy_down\"><use href=\"#" ..
+    RuntimeSourceId("enemy_easy", "fallback_enemy") ..
     "\" transform=\"rotate(180 17 17)\"/></g>",
-  "<g id=\"enemy_medium_down\"><use href=\"#" .. RuntimeSourceId("enemy_medium", "fallback_enemy") ..
+  enemy_medium =
+    "<g id=\"enemy_medium_down\"><use href=\"#" ..
+    RuntimeSourceId("enemy_medium", "fallback_enemy") ..
     "\" transform=\"rotate(180 17 17)\"/></g>",
-  "<g id=\"enemy_hard_down\"><use href=\"#" .. RuntimeSourceId("enemy_hard", "fallback_enemy") ..
+  enemy_hard =
+    "<g id=\"enemy_hard_down\"><use href=\"#" ..
+    RuntimeSourceId("enemy_hard", "fallback_enemy") ..
     "\" transform=\"rotate(180 17 17)\"/></g>"
-})
+}
 
-local BOSS_ORIENTATION_DEFINITIONS = table.concat({
-  "<g id=\"boss_mini_easy_down\"><use href=\"#" ..
+local BOSS_ORIENTATION_DEFINITIONS = {
+  MINI_EASY =
+    "<g id=\"boss_mini_easy_down\"><use href=\"#" ..
     RuntimeSourceId("mini_boss_easy", "fallback_boss_easy") ..
     "\" transform=\"rotate(180 36 28)\"/></g>",
-  "<g id=\"boss_mini_medium_down\"><use href=\"#" ..
+  MINI_MEDIUM =
+    "<g id=\"boss_mini_medium_down\"><use href=\"#" ..
     RuntimeSourceId("mini_boss_medium", "fallback_boss_medium") ..
     "\" transform=\"rotate(180 44 32)\"/></g>",
-  "<g id=\"boss_final_down\"><use href=\"#" ..
+  FINAL =
+    "<g id=\"boss_final_down\"><use href=\"#" ..
     RuntimeSourceId("final_boss", "fallback_boss_final") ..
     "\" transform=\"rotate(180 60 40)\"/></g>"
-})
+}
 
-local DYNAMIC_GAMEPLAY_DEFINITIONS = table.concat(DYNAMIC_DEFINITION_PARTS) ..
+local STATIC_GAMEPLAY_DEFINITIONS =
   FALLBACK_PLAYER_DEFINITION .. FALLBACK_ENEMY_DEFINITION ..
   PLAYER_BULLET_VISIBLE_DEFINITION .. ENEMY_BULLET_VISIBLE_DEFINITION ..
   FALLBACK_EXPLOSION_DEFINITION .. FALLBACK_BOSS_EASY_DEFINITION ..
-  FALLBACK_BOSS_MEDIUM_DEFINITION .. FALLBACK_BOSS_FINAL_DEFINITION ..
-  ENEMY_ORIENTATION_DEFINITIONS .. BOSS_ORIENTATION_DEFINITIONS
-
-local function AssetAvailable(assetId)
-  local asset = ASSETS[assetId]
-  return asset ~= nil and asset.Available
-end
+  FALLBACK_BOSS_MEDIUM_DEFINITION .. FALLBACK_BOSS_FINAL_DEFINITION
 
 local function RuntimeDefinitionAvailable(assetId)
   return RUNTIME_DEFINITION_AVAILABLE[assetId] == true
+end
+
+local function AppendAssetDefinition(parts, assetId)
+  local definition = ASSET_SVG_DEFINITIONS[assetId]
+  if definition ~= nil then
+    parts[#parts + 1] = definition
+  end
 end
 
 local function AppendDefinitionUse(parts, definitionId, x, y)
@@ -147,14 +165,21 @@ local function AppendSpriteUse(parts, assetId, fallbackId, x, y)
   AppendDefinitionUse(parts, RuntimeSourceId(assetId, fallbackId), x, y)
 end
 
-local function ResolvePlayerDefinition(direction)
+local function ResolvePlayerAssetId(direction)
   if direction == "left" and RuntimeDefinitionAvailable("player_left") then
     return "player_left"
   end
   if direction == "right" and RuntimeDefinitionAvailable("player_right") then
     return "player_right"
   end
-  return RuntimeSourceId("player_idle", "fallback_player")
+  if RuntimeDefinitionAvailable("player_idle") then
+    return "player_idle"
+  end
+  return nil
+end
+
+local function ResolvePlayerDefinition(direction)
+  return ResolvePlayerAssetId(direction) or "fallback_player"
 end
 
 local function ResolveBossDefinition(bossType)
@@ -166,12 +191,14 @@ local function ResolveBossDefinition(bossType)
   return "boss_final_down"
 end
 
-local function AssetAvailabilitySummary()
-  return tostring(availableAssetCount) .. "/" .. tostring(#ASSET_MANIFEST) .. " ASSETS"
+local function AppendEnemyFrameDefinition(parts, profile)
+  AppendAssetDefinition(parts, profile.EnemyAsset)
+  parts[#parts + 1] = ENEMY_ORIENTATION_DEFINITIONS[profile.EnemyAsset]
 end
 
-local function DynamicGameplayDefinitionBytes()
-  return #DYNAMIC_GAMEPLAY_DEFINITIONS
+local function AppendBossFrameDefinition(parts, boss)
+  AppendAssetDefinition(parts, boss.assetId)
+  parts[#parts + 1] = BOSS_ORIENTATION_DEFINITIONS[boss.bossType]
 end
 
 local function MissingAssetList()

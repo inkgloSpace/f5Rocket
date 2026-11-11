@@ -3,8 +3,17 @@ local SVG_ROOT_OPEN =
 
 -- The dynamic frame is intentionally transparent. Stage artwork lives in the
 -- low-frequency BackgroundViewport and is never copied into this prefix.
-local GAME_SVG_PREFIX = SVG_ROOT_OPEN .. "<defs>" ..
-  DYNAMIC_GAMEPLAY_DEFINITIONS .. PARALLAX_SVG_DEFINITIONS .. "</defs>"
+local GAME_SVG_DEFS_PREFIX = SVG_ROOT_OPEN .. "<defs>" ..
+  STATIC_GAMEPLAY_DEFINITIONS .. PARALLAX_SVG_DEFINITIONS
+
+local GAME_SVG_PARTS = {}
+local BACKGROUND_FRAME_PARTS = {}
+
+local function ClearSvgParts(parts)
+  for index = #parts, 1, -1 do
+    parts[index] = nil
+  end
+end
 
 local FALLBACK_BACKGROUND_COLORS = {
   [1] = "#083b69",
@@ -12,39 +21,67 @@ local FALLBACK_BACKGROUND_COLORS = {
   [3] = "#090d2a"
 }
 
-local function BuildStageBackgroundSvg(stageIndex, scrollY)
+local function BuildFallbackBackgroundDefinition(stageIndex, tileHeight)
+  local parts = {
+    "<g id=\"stage_background_tile\"><rect width=\"320\" height=\"" ..
+    tostring(tileHeight) .. "\" fill=\"" ..
+    FALLBACK_BACKGROUND_COLORS[stageIndex] .. "\"/>"
+  }
+
+  for index = 1, 28 do
+    local x = (index * 47 + stageIndex * 19) % GAME_CONFIG.LogicalWidth
+    local y = (index * 83 + stageIndex * 31) % tileHeight
+    local size = 1 + (index % 2)
+    parts[#parts + 1] = "<rect x=\"" .. tostring(x) .. "\" y=\"" ..
+      tostring(y) .. "\" width=\"" .. tostring(size) .. "\" height=\"" ..
+      tostring(size) .. "\" fill=\"#d7f7ff\"/>"
+  end
+
+  parts[#parts + 1] = "</g>"
+  return table.concat(parts)
+end
+
+local BACKGROUND_SVG_PREFIXES = {}
+
+for stageIndex = 1, 3 do
   local profile = STAGE_PROFILES[stageIndex]
   local asset = ASSETS[profile.BackgroundAsset]
   local tileHeight = GAME_CONFIG.BackgroundTileHeight
-  local offset = math.floor(scrollY) % tileHeight
-  local parts = { SVG_ROOT_OPEN, "<defs>" }
+  local definition
 
   if asset ~= nil and asset.Available then
-    parts[#parts + 1] = "<image id=\"stage_background_tile\" href=\"" ..
+    definition = "<image id=\"stage_background_tile\" href=\"" ..
       asset.DataUri .. "\" width=\"320\" height=\"" ..
       tostring(tileHeight) .. "\" preserveAspectRatio=\"none\"/>"
   else
-    parts[#parts + 1] = "<g id=\"stage_background_tile\"><rect width=\"320\" height=\"" ..
-      tostring(tileHeight) .. "\" fill=\"" ..
-      FALLBACK_BACKGROUND_COLORS[stageIndex] .. "\"/>"
-    for index = 1, 28 do
-      local x = (index * 47 + stageIndex * 19) % GAME_CONFIG.LogicalWidth
-      local y = (index * 83 + stageIndex * 31) % tileHeight
-      local size = 1 + (index % 2)
-      parts[#parts + 1] = "<rect x=\"" .. tostring(x) .. "\" y=\"" ..
-        tostring(y) .. "\" width=\"" .. tostring(size) .. "\" height=\"" ..
-        tostring(size) .. "\" fill=\"#d7f7ff\"/>"
-    end
-    parts[#parts + 1] = "</g>"
+    definition = BuildFallbackBackgroundDefinition(stageIndex, tileHeight)
   end
 
-  parts[#parts + 1] = "</defs>"
-  parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
-    tostring(offset - tileHeight) .. "\"/>"
-  parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
-    tostring(offset) .. "\"/>"
-  parts[#parts + 1] = "</svg>"
-  return table.concat(parts), profile.BackgroundAsset
+  BACKGROUND_SVG_PREFIXES[stageIndex] =
+    SVG_ROOT_OPEN .. "<defs>" .. definition .. "</defs>"
+
+  -- The prefix now owns the complete immutable definition, so the duplicate
+  -- DataURI reference in ASSETS is no longer needed after initialization.
+  if asset ~= nil then
+    asset.DataUri = ""
+  end
+end
+
+local function BuildStageBackgroundSvg(stageIndex, scrollY)
+  local profile = STAGE_PROFILES[stageIndex]
+  local tileHeight = GAME_CONFIG.BackgroundTileHeight
+  local offset = math.floor(scrollY) % tileHeight
+
+  BACKGROUND_FRAME_PARTS[1] = BACKGROUND_SVG_PREFIXES[stageIndex]
+  BACKGROUND_FRAME_PARTS[2] =
+    "<use href=\"#stage_background_tile\" x=\"0\" y=\""
+  BACKGROUND_FRAME_PARTS[3] = tostring(offset - tileHeight)
+  BACKGROUND_FRAME_PARTS[4] =
+    "\"/><use href=\"#stage_background_tile\" x=\"0\" y=\""
+  BACKGROUND_FRAME_PARTS[5] = tostring(offset)
+  BACKGROUND_FRAME_PARTS[6] = "\"/></svg>"
+
+  return table.concat(BACKGROUND_FRAME_PARTS), profile.BackgroundAsset
 end
 
 local function AppendEnemy(parts, state, enemy)
@@ -74,6 +111,56 @@ end
 
 local function AppendBoss(parts, boss)
   AppendDefinitionUse(parts, ResolveBossDefinition(boss.bossType), boss.x, boss.y)
+end
+
+local function AppendFrameAssetDefinitions(parts, state)
+  if state.player.alive then
+    local playerAssetId = ResolvePlayerAssetId(state.player.direction)
+    if playerAssetId ~= nil then
+      AppendAssetDefinition(parts, playerAssetId)
+    end
+  end
+
+  local ordinaryEnemyVisible = false
+  for index = 1, GAME_CONFIG.MaxEnemies do
+    if state.enemies[index].active then
+      ordinaryEnemyVisible = true
+      break
+    end
+  end
+  if ordinaryEnemyVisible then
+    AppendEnemyFrameDefinition(parts, GetStageProfile(state))
+  end
+
+  if state.boss.active then
+    AppendBossFrameDefinition(parts, state.boss)
+  end
+
+  local explosionFrame1 = false
+  local explosionFrame2 = false
+  local explosionFrame3 = false
+  for index = 1, GAME_CONFIG.MaxExplosions do
+    local explosion = state.explosions[index]
+    if explosion.active and explosion.delayTicks <= 0 then
+      if explosion.frame == 1 then
+        explosionFrame1 = true
+      elseif explosion.frame == 2 then
+        explosionFrame2 = true
+      elseif explosion.frame == 3 then
+        explosionFrame3 = true
+      end
+    end
+  end
+
+  if explosionFrame1 then
+    AppendAssetDefinition(parts, "explosion_01")
+  end
+  if explosionFrame2 then
+    AppendAssetDefinition(parts, "explosion_02")
+  end
+  if explosionFrame3 then
+    AppendAssetDefinition(parts, "explosion_03")
+  end
 end
 
 local function AppendHud(parts, state)
@@ -112,7 +199,11 @@ local function AppendCenteredOverlay(parts, title, score, prompt)
 end
 
 local function BuildGameSvg(state)
-  local parts = { GAME_SVG_PREFIX }
+  local parts = GAME_SVG_PARTS
+  ClearSvgParts(parts)
+  parts[1] = GAME_SVG_DEFS_PREFIX
+  AppendFrameAssetDefinitions(parts, state)
+  parts[#parts + 1] = "</defs>"
 
   AppendFarParallax(parts, state)
   AppendMidParallax(parts, state)

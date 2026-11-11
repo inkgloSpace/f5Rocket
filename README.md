@@ -151,6 +151,8 @@ The plugin uses two aligned Button controls driven by one 30 Hz timer:
 
 Each stage background is a seamless 320 × 480 portrait PNG. Its SVG embeds the tile once in `<defs>` and uses two integer-positioned `<use href>` instances to cover the 320 × 480 logical viewport while scrolling downward. The stages progress from the bright alien-controlled upper atmosphere, through a purple asteroid field, into the enemy headquarters. Gameplay frames use the same conservative definitions/reuse strategy. Separate 64 KiB raw-SVG guards protect both rendering paths.
 
+Simulation and gameplay rendering remain fixed at 30 Hz, while the seamless background remains at 15 Hz on the same timer. Each dynamic gameplay SVG embeds only the PNG definitions required by its current player, stage enemy or boss, and visible explosion frames; repeated objects reference those definitions through `<use>`. Fixed gameplay pools remain in use, and fully frozen Game Over or Mission Complete scenes stop the timer only after their final frame has been assigned.
+
 The player uses optimized 160 × 240 PNG sources, renders at 56 × 84 logical pixels, and retains a 40 × 48 collision box. Projectiles are lightweight reusable SVG definitions.
 
 ## Repository layout

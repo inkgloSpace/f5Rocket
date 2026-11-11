@@ -132,6 +132,49 @@ def lua_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
 
 
+def report_asset_payloads(encoded_sizes: dict[str, int]) -> None:
+    dynamic_ids = [asset_id for asset_id, _ in DYNAMIC_GAMEPLAY_ASSETS]
+    dynamic_total = sum(encoded_sizes.get(asset_id, 0) for asset_id in dynamic_ids)
+
+    print("Base64 PNG payload report (ASCII bytes/characters):")
+    print(f"  dynamic total (legacy all-assets frame): {dynamic_total}")
+    for asset_id in dynamic_ids:
+        print(f"  dynamic {asset_id}: {encoded_sizes.get(asset_id, 0)}")
+
+    for asset_id, _ in STATIC_BACKGROUND_ASSETS:
+        print(f"  background {asset_id}: {encoded_sizes.get(asset_id, 0)}")
+
+    def report_frame(label: str, asset_ids: tuple[str, ...]) -> None:
+        payload = sum(encoded_sizes.get(asset_id, 0) for asset_id in asset_ids)
+        reduction = 0.0
+        if dynamic_total > 0:
+            reduction = (1.0 - payload / dynamic_total) * 100.0
+        joined = " + ".join(asset_ids)
+        print(f"  {label}: {payload} ({reduction:.1f}% reduction; {joined})")
+
+    report_frame("typical wave EASY", ("player_idle", "enemy_easy"))
+    report_frame("typical wave MEDIUM", ("player_idle", "enemy_medium"))
+    report_frame("typical wave HARD", ("player_idle", "enemy_hard"))
+    report_frame("typical boss MINI_EASY", ("player_idle", "mini_boss_easy"))
+    report_frame("typical boss MINI_MEDIUM", ("player_idle", "mini_boss_medium"))
+    report_frame("typical boss FINAL", ("player_idle", "final_boss"))
+
+    player_ids = ("player_idle", "player_left", "player_right")
+    boss_ids = ("mini_boss_easy", "mini_boss_medium", "final_boss")
+    largest_player = max(player_ids, key=lambda asset_id: encoded_sizes.get(asset_id, 0))
+    largest_boss = max(boss_ids, key=lambda asset_id: encoded_sizes.get(asset_id, 0))
+    report_frame(
+        "worst boss + all explosion frames",
+        (
+            largest_player,
+            largest_boss,
+            "explosion_01",
+            "explosion_02",
+            "explosion_03",
+        ),
+    )
+
+
 def generate_game_assets() -> None:
     lines = [
         "-- GENERATED FILE - DO NOT EDIT.\n",
@@ -141,6 +184,7 @@ def generate_game_assets() -> None:
     ]
     available_count = 0
     missing_paths = []
+    encoded_sizes: dict[str, int] = {}
 
     for asset_id, relative_path in ASSET_MANIFEST:
         source_path = REPO_ROOT / relative_path
@@ -163,6 +207,8 @@ def generate_game_assets() -> None:
         else:
             missing_paths.append(relative_path)
             lines.append(f"  -- Missing: {relative_path}\n")
+
+        encoded_sizes[asset_id] = encoded_bytes
 
         lines.extend(
             [
@@ -197,6 +243,7 @@ def generate_game_assets() -> None:
     )
     if missing_paths:
         print("Missing assets: " + ", ".join(missing_paths))
+    report_asset_payloads(encoded_sizes)
 
 
 def generated_header(entry: Path) -> str:
