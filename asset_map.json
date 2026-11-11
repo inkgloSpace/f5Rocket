@@ -26,8 +26,8 @@
     "final_boss": {"path": "assets/boss/final_boss.png", "logical_size": [120, 80]}
   },
   "static_background_assets": {
-    "easy": {"path": "assets/background/background_easy.png", "pixel_size": [320, 480]},
-    "medium": {"path": "assets/background/background_medium.png", "pixel_size": [320, 480]},
-    "hard": {"path": "assets/background/background_hard.png", "pixel_size": [320, 480]}
+    "easy": {"path": "assets/background/background_easy_loop.png", "pixel_width": 320, "pixel_height": 240, "usage": "scrolling-stage-background", "vertical_loop": true},
+    "medium": {"path": "assets/background/background_medium_loop.png", "pixel_width": 320, "pixel_height": 240, "usage": "scrolling-stage-background", "vertical_loop": true},
+    "hard": {"path": "assets/background/background_hard_loop.png", "pixel_width": 320, "pixel_height": 240, "usage": "scrolling-stage-background", "vertical_loop": true}
   }
 }

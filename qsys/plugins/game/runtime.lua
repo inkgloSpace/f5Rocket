@@ -1,6 +1,7 @@
 local rapidjson = require("rapidjson")
 
 local gameState = CreateGameState()
+local backgroundRenderCounter = 0
 local recentHorizontalIntent = 0
 local recentHorizontalTicks = 0
 local recentVerticalIntent = 0
@@ -23,16 +24,24 @@ BackgroundLegend = {
 -- Keep the single timer globally scoped so Q-SYS Lua GC cannot remove it.
 GameTimer = Timer.New()
 
-local function AssignStageBackground(stageIndex)
-  local svg, assetId = BuildStageBackgroundSvg(stageIndex)
+local function RenderBackgroundFrame()
+  local svg = BuildStageBackgroundSvg(
+    gameState.stageIndex,
+    gameState.backgroundScrollY
+  )
+  local rawBytes = #svg
+
+  if rawBytes > GAME_CONFIG.MaxRawBackgroundSvgBytes then
+    error(
+      "Background SVG " .. tostring(rawBytes) .. " B > " ..
+      tostring(GAME_CONFIG.MaxRawBackgroundSvgBytes) .. " B",
+      0
+    )
+  end
+
   local encodedSvg = Crypto.Base64Encode(svg)
   BackgroundLegend.IconData = encodedSvg
   Controls.BackgroundViewport.Legend = rapidjson.encode(BackgroundLegend)
-  print(
-    "[f5Rocket] Background changed: " .. STAGE_PROFILES[stageIndex].Name ..
-    " / " .. assetId .. " / " .. tostring(#svg) .. " B raw / " ..
-    tostring(#encodedSvg) .. " B Base64"
-  )
 end
 
 local function RenderGameFrame()
@@ -180,7 +189,8 @@ local function UpdateGameState()
     if nextStage ~= nil then
       ResetEnemies(gameState)
       ResetParallax(gameState, nextStage)
-      AssignStageBackground(nextStage)
+      backgroundRenderCounter = 0
+      RenderBackgroundFrame()
     end
     return
   end
@@ -250,7 +260,8 @@ local function StartGame()
   ResetParallax(gameState, 1)
   gameState.running = true
   gameState.paused = false
-  AssignStageBackground(1)
+  backgroundRenderCounter = 0
+  RenderBackgroundFrame()
   RenderGameFrame()
   Controls.Status.String = "RUNNING"
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
@@ -285,6 +296,8 @@ local function ResumeGame()
 
   ResetCardinalChordAssist()
   gameState.paused = false
+  backgroundRenderCounter = 0
+  RenderBackgroundFrame()
   RenderGameFrame()
   Controls.Status.String = "RUNNING"
   GameTimer:Start(GAME_CONFIG.UpdateInterval)
@@ -292,6 +305,14 @@ end
 
 GameTimer.EventHandler = function()
   UpdateGameState()
+  UpdateBackgroundScroll(gameState)
+
+  backgroundRenderCounter = backgroundRenderCounter + 1
+  if backgroundRenderCounter >= GAME_CONFIG.BackgroundRenderDivider then
+    backgroundRenderCounter = 0
+    RenderBackgroundFrame()
+  end
+
   RenderGameFrame()
 end
 
@@ -323,7 +344,8 @@ ResetCardinalChordAssist()
 GameTimer:Stop()
 Controls.Run.Boolean = false
 Controls.Pause.Boolean = false
-AssignStageBackground(1)
+backgroundRenderCounter = 0
+RenderBackgroundFrame()
 RenderGameFrame()
 Controls.Status.String = "READY"
 

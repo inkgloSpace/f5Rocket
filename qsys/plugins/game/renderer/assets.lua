@@ -11,9 +11,9 @@ local ASSET_MANIFEST = {
   { Id = "mini_boss_easy", Source = "assets/boss/mini_boss_easy.png", Width = 72, Height = 56 },
   { Id = "mini_boss_medium", Source = "assets/boss/mini_boss_medium.png", Width = 88, Height = 64 },
   { Id = "final_boss", Source = "assets/boss/final_boss.png", Width = 120, Height = 80 },
-  { Id = "background_easy", Source = "assets/background/background_easy.png", Width = 320, Height = 480 },
-  { Id = "background_medium", Source = "assets/background/background_medium.png", Width = 320, Height = 480 },
-  { Id = "background_hard", Source = "assets/background/background_hard.png", Width = 320, Height = 480 }
+  { Id = "background_easy_loop", Source = "assets/background/background_easy_loop.png", Width = 320, Height = 240 },
+  { Id = "background_medium_loop", Source = "assets/background/background_medium_loop.png", Width = 320, Height = 240 },
+  { Id = "background_hard_loop", Source = "assets/background/background_hard_loop.png", Width = 320, Height = 240 }
 }
 
 local DYNAMIC_GAMEPLAY_ASSETS = GENERATED_DYNAMIC_GAMEPLAY_ASSET_IDS

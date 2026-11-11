@@ -44,7 +44,7 @@ The standard-library-only builder:
 
 ## Generated asset data
 
-The asset generator separates small dynamic gameplay sprites from full-screen static backgrounds. Dynamic PNG definitions are embedded in the 30 Hz SVG once and reused with `<use href>`. Stage backgrounds are Base64-encoded into `BackgroundViewport` only when a background assignment is required.
+The asset generator separates dynamic gameplay sprites from seamless stage-background tiles. Dynamic PNG definitions are embedded in the 30 Hz gameplay SVG once and reused with `<use href>`. Each 320 × 240 background PNG is embedded once in its own SVG `<defs>` block and repeated through three `<use href>` instances.
 
 The player PNGs are optimized 160 × 240 sources. They render at 56 × 84 logical pixels while collision and movement continue to use a 40 × 48 box. Player and hostile projectiles are reusable 6 × 14 SVG definitions, so no projectile PNG payload is required.
 
@@ -54,10 +54,12 @@ The player PNGs are optimized 160 × 240 sources. They render at 56 × 84 logica
 - Momentary `Run` starts or restarts the campaign
 - Toggle `Pause` stops and restarts the same timer without resetting state
 - 320 × 480 logical coordinates displayed at 480 × 720
-- Static `BackgroundViewport` plus transparent dynamic `Viewport`
+- Scrolling `BackgroundViewport` plus transparent dynamic `Viewport`
+- Gameplay SVG and `Viewport.Legend` update at 30 Hz
+- A render divider of 2 updates the background SVG and `BackgroundViewport.Legend` at 15 Hz
 - Deterministic stage, boss, parallax, pool, and input logic
-- One dynamic SVG build, Base64 encode, and `Viewport.Legend` assignment per frame
-- 64 KiB raw dynamic-SVG safety guard
+- One gameplay SVG build, Base64 encode, and `Viewport.Legend` assignment per game frame
+- Separate 64 KiB raw-SVG safety guards for gameplay and background frames
 
 ## Controls and input pins
 
@@ -78,7 +80,7 @@ Movement and Fire inputs are sampled inside the game tick. Their controls have n
 ## Asset constraints
 
 - Keep hot-frame PNGs compact; their data URIs are repeated inside each dynamic SVG payload.
-- Keep 320 × 480 stage backgrounds out of the hot frame.
+- Keep the 320 × 240 seamless stage tiles out of the 30 Hz gameplay frame.
 - Preserve the optimized player sources unless a deliberate asset-pipeline change is made.
 - Update `qsys/tools/build.py`, `renderer/assets.lua`, `asset_map.json`, and `README_ASSETS.txt` together when changing the manifest.
 
@@ -89,5 +91,6 @@ Movement and Fire inputs are sampled inside the game tick. Their controls have n
 3. Confirm the Easy background and READY state.
 4. Test Run restart, Pause/resume, movement, diagonal controls, Fire, and AutoFire.
 5. Exercise all three waves, both minibosses, the final boss, Game Over, and Mission Complete.
-6. Confirm static backgrounds change only on initialization, restart, or stage transition.
-7. Confirm dynamic frames remain under the 64 KiB raw guard.
+6. Confirm stage backgrounds scroll downward without a seam, pause with the game, and reset at stage changes.
+7. Confirm gameplay remains at 30 Hz while the background updates at 15 Hz.
+8. Confirm gameplay and background frames remain under their 64 KiB raw guards.

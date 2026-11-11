@@ -7,13 +7,16 @@ local GAME_CONFIG = {
   -- Project safety budget, not an official Q-SYS limit. Oversized dynamic
   -- frames are rejected before Base64 encoding or Viewport.Legend assignment.
   MaxRawSvgBytes = 64 * 1024,
+  MaxRawBackgroundSvgBytes = 64 * 1024,
+  BackgroundTileHeight = 240,
+  BackgroundRenderDivider = 2,
 
   PlayerWidth = 40,
   PlayerHeight = 48,
   PlayerRenderWidth = 56,
   PlayerRenderHeight = 84,
-  PlayerSpeed = 4,
-  PlayerDiagonalSpeed = 3,
+  PlayerSpeed = 5,
+  PlayerDiagonalSpeed = 4,
   CardinalChordGraceTicks = 4,
   PlayerStartY = 414,
 
@@ -103,7 +106,8 @@ local STAGE_PROFILES = {
     ScoreThreshold = 5000,
     EnemyAsset = "enemy_easy",
     EnemyDefinition = "enemy_easy_down",
-    BackgroundAsset = "background_easy",
+    BackgroundAsset = "background_easy_loop",
+    BackgroundScrollSpeed = 0.75,
     BossType = "MINI_EASY"
   },
   [2] = {
@@ -117,7 +121,8 @@ local STAGE_PROFILES = {
     ScoreThreshold = 10000,
     EnemyAsset = "enemy_medium",
     EnemyDefinition = "enemy_medium_down",
-    BackgroundAsset = "background_medium",
+    BackgroundAsset = "background_medium_loop",
+    BackgroundScrollSpeed = 1.00,
     BossType = "MINI_MEDIUM"
   },
   [3] = {
@@ -131,7 +136,8 @@ local STAGE_PROFILES = {
     ScoreThreshold = 15000,
     EnemyAsset = "enemy_hard",
     EnemyDefinition = "enemy_hard_down",
-    BackgroundAsset = "background_hard",
+    BackgroundAsset = "background_hard_loop",
+    BackgroundScrollSpeed = 1.25,
     BossType = "FINAL"
   }
 }

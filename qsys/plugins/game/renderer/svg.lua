@@ -12,27 +12,39 @@ local FALLBACK_BACKGROUND_COLORS = {
   [3] = "#090d2a"
 }
 
-local function BuildStageBackgroundSvg(stageIndex)
+local function BuildStageBackgroundSvg(stageIndex, scrollY)
   local profile = STAGE_PROFILES[stageIndex]
   local asset = ASSETS[profile.BackgroundAsset]
-  local parts = { SVG_ROOT_OPEN }
+  local tileHeight = GAME_CONFIG.BackgroundTileHeight
+  local offset = math.floor(scrollY) % tileHeight
+  local parts = { SVG_ROOT_OPEN, "<defs>" }
 
   if asset ~= nil and asset.Available then
-    parts[#parts + 1] = "<image href=\"" .. asset.DataUri ..
-      "\" width=\"320\" height=\"480\" preserveAspectRatio=\"none\"/>"
+    parts[#parts + 1] = "<image id=\"stage_background_tile\" href=\"" ..
+      asset.DataUri .. "\" width=\"320\" height=\"" ..
+      tostring(tileHeight) .. "\" preserveAspectRatio=\"none\"/>"
   else
-    parts[#parts + 1] = "<rect width=\"320\" height=\"480\" fill=\"" ..
+    parts[#parts + 1] = "<g id=\"stage_background_tile\"><rect width=\"320\" height=\"" ..
+      tostring(tileHeight) .. "\" fill=\"" ..
       FALLBACK_BACKGROUND_COLORS[stageIndex] .. "\"/>"
     for index = 1, 28 do
       local x = (index * 47 + stageIndex * 19) % GAME_CONFIG.LogicalWidth
-      local y = (index * 83 + stageIndex * 31) % GAME_CONFIG.LogicalHeight
+      local y = (index * 83 + stageIndex * 31) % tileHeight
       local size = 1 + (index % 2)
       parts[#parts + 1] = "<rect x=\"" .. tostring(x) .. "\" y=\"" ..
         tostring(y) .. "\" width=\"" .. tostring(size) .. "\" height=\"" ..
         tostring(size) .. "\" fill=\"#d7f7ff\"/>"
     end
+    parts[#parts + 1] = "</g>"
   end
 
+  parts[#parts + 1] = "</defs>"
+  parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
+    tostring(offset - tileHeight) .. "\"/>"
+  parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
+    tostring(offset) .. "\"/>"
+  parts[#parts + 1] = "<use href=\"#stage_background_tile\" x=\"0\" y=\"" ..
+    tostring(offset + tileHeight) .. "\"/>"
   parts[#parts + 1] = "</svg>"
   return table.concat(parts), profile.BackgroundAsset
 end

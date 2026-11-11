@@ -7,7 +7,8 @@ f5Rocket is a semi-8-bit vertical arcade shooter implemented as a production Q-S
 - Q-SYS Designer and Q-SYS Core
 - 320 × 480 logical game coordinates
 - 480 × 720 plugin display
-- Fixed 30 Hz update and dynamic-render rate
+- Fixed 30 Hz gameplay update/render rate
+- 15 Hz seamless stage-background render rate from the same timer
 
 ## Build
 
@@ -47,12 +48,12 @@ Q-SYS input pins are exposed for `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, 
 
 ## Rendering architecture
 
-The plugin uses two aligned Button controls:
+The plugin uses two aligned Button controls driven by one 30 Hz timer:
 
-- `BackgroundViewport` receives a phase background only at initialization, restart, or stage transition.
+- `BackgroundViewport` renders the vertically looping stage background at 15 Hz.
 - `Viewport` receives the transparent gameplay overlay at 30 Hz.
 
-Frames are assembled as conservative SVG strings. PNG sprites are embedded once in `<defs>` and placed with `<use href>`. The complete SVG is Base64-encoded once per frame and assigned through `Viewport.Legend.IconData`. A 64 KiB raw-SVG guard protects the hot rendering path.
+Each stage background is a seamless 320 × 240 PNG. Its SVG embeds the tile once in `<defs>` and uses three integer-positioned `<use href>` instances to cover the 320 × 480 logical viewport while scrolling downward. Gameplay frames use the same conservative definitions/reuse strategy. Separate 64 KiB raw-SVG guards protect both rendering paths.
 
 The player uses optimized 160 × 240 PNG sources, renders at 56 × 84 logical pixels, and retains a 40 × 48 collision box. Projectiles are lightweight reusable SVG definitions.
 

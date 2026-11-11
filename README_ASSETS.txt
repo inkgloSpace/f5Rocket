@@ -1,11 +1,11 @@
 f5Rocket production asset inventory
 
-Stage backgrounds are assigned to the static BackgroundViewport. Dynamic gameplay PNGs are embedded in SVG <defs> and reused with <use href>.
+Stage backgrounds are vertically seamless production tiles rendered only in BackgroundViewport. Each tile is embedded once in SVG <defs> and repeated with three <use href> instances. Dynamic gameplay PNGs use the same definitions/reuse principle in the transparent gameplay viewport.
 
 path | PNG pixels | bytes | logical use
-assets/background/background_easy.png | 320x480 | 49616 | static Easy background, 320x480
-assets/background/background_medium.png | 320x480 | 185640 | static Medium background, 320x480
-assets/background/background_hard.png | 320x480 | 171614 | static Hard background, 320x480
+assets/background/background_easy_loop.png | 320x240 | 32729 | seamless Easy scrolling tile; BackgroundViewport only
+assets/background/background_medium_loop.png | 320x240 | 39704 | seamless Medium scrolling tile; BackgroundViewport only
+assets/background/background_hard_loop.png | 320x240 | 36099 | seamless Hard scrolling tile; BackgroundViewport only
 assets/boss/mini_boss_easy.png | 72x56 | 2323 | dynamic sprite, 72x56
 assets/boss/mini_boss_medium.png | 88x64 | 2944 | dynamic sprite, 88x64
 assets/boss/final_boss.png | 120x80 | 4149 | dynamic sprite, 120x80

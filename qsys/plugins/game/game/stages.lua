@@ -6,6 +6,15 @@ local function GetStageProfile(stateOrIndex)
   return STAGE_PROFILES[index]
 end
 
+local function UpdateBackgroundScroll(state)
+  local profile = GetStageProfile(state)
+  local nextY = state.backgroundScrollY + profile.BackgroundScrollSpeed
+  if nextY >= GAME_CONFIG.BackgroundTileHeight then
+    nextY = nextY - GAME_CONFIG.BackgroundTileHeight
+  end
+  state.backgroundScrollY = nextY
+end
+
 local function DeactivateOrdinaryEnemies(state)
   for index = 1, GAME_CONFIG.MaxEnemies do
     state.enemies[index].active = false
@@ -31,6 +40,7 @@ local function EnterStage(state, stageIndex)
   state.stageScore = 0
   state.stagePhase = "WAVE"
   state.stageTransitionTicks = 0
+  state.backgroundScrollY = 0
   state.gameClear = false
   state.campaignFrozen = false
   state.boss.active = false

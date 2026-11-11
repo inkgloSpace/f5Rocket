@@ -15,6 +15,7 @@ local function CreateGameState()
     score = 0,
     time = 0,
     ticks = 0,
+    backgroundScrollY = 0,
     player = {},
     boss = {
       active = false,
@@ -148,6 +149,7 @@ local function ResetGameState(state)
   state.score = 0
   state.time = 0
   state.ticks = 0
+  state.backgroundScrollY = 0
 
   state.player.x = math.floor((GAME_CONFIG.LogicalWidth - GAME_CONFIG.PlayerWidth) / 2)
   state.player.y = GAME_CONFIG.PlayerStartY
