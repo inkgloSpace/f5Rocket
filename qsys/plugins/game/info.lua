@@ -1,14 +1,14 @@
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.6.4",
-  BuildVersion = "0.6.4.0",
+  Version = "0.6.5",
+  BuildVersion = "0.6.5.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
 }
 
 function GetColor(props)
-  return { 7, 16, 31 }
+  return { 105, 105, 105 }
 end
 
 function GetPrettyName(props)

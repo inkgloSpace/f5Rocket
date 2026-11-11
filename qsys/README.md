@@ -72,8 +72,10 @@ The player PNGs are optimized 160 × 240 sources. They render at 56 × 84 logica
 The plugin UI is split into three pages:
 
 - Page 1 — `Game`: only the aligned 480 × 720 background and gameplay viewports.
-- Page 2 — `Controls`: Run, Pause, eight-direction touch movement, Fire, AutoFire, and keyboard help.
-- Page 3 — `About`: static description, operating help, control options, version, and project URL.
+- Page 2 — `Controls`: a structured neutral-grey controller UI with Run, Pause, eight-direction touch movement, Fire, AutoFire, and keyboard help.
+- Page 3 — `About`: static text-only description, operating help, control options, version, and project URL, without GroupBoxes.
+
+Controls-page colors are explicitly assigned neutral RGB values instead of relying on Q-SYS Designer theme defaults. The About page uses only neutral static typography over the normal Designer page background.
 
 The former Status text control was intentionally removed because READY, PAUSED, Game Over, Mission Complete, and stage feedback are already rendered inside the gameplay viewport. Input pins remain exposed for:
 
