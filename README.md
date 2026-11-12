@@ -39,20 +39,18 @@ The helper connects to Q-SYS Designer Emulate through QRC at `127.0.0.1:1710`. I
 Before using it, configure the f5Rocket plugin component in Q-SYS Designer:
 
 1. Set **Code Name** to:
-
-   ```text
-   f5Rocket
    ```
+   f5Rocket
 
+   ```
 2. Set **Script Access** to `All`.
 
 Then:
 
-1. Open the design in Q-SYS Designer.
-2. Start **Emulate** mode with F6.
-3. Run `tools/f5Rocket_Keyboard.exe`.
-4. Play using the laptop/PC keyboard.
-5. Press F12 or close the bridge when it is no longer needed.
+1. Start **Emulate** mode with F6.
+2. Run `tools/f5Rocket_Keyboard.exe`.
+3. Play using the laptop/PC keyboard.
+4. Press F12 or close the bridge when it is no longer needed.
 
 Keyboard mapping:
 
