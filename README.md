@@ -88,6 +88,9 @@ This path does not use the Windows QRC bridge. The proven Control Script uses di
 Setup:
 
 1. Remove the Q-SYS **USB Input** component from the design.
+
+   > **Note:** The USB Input component must not be used together with the f5Rocket USB keyboard Control Script. The script accesses the keyboard directly through the Q-SYS Lua USB HID API, and keeping USB Input in the design may interfere with direct keyboard access.
+
 2. Set the f5Rocket plugin component **Code Name** to `f5Rocket`.
 3. Set f5Rocket **Script Access** to `All`.
 4. Add a Q-SYS **Control Script** component to the schematic.
