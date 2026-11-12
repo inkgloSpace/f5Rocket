@@ -127,12 +127,6 @@ Q-SYS input pins are exposed for `Run`, `Pause`, `Up`, `Down`, `Left`, `Right`, 
 
 Player fire supports up to five rapid shots per burst. A complete burst triggers a one-second recovery cooldown. If no successful shot occurs for 0.5 seconds, a partial burst resets automatically. Manual Fire and AutoFire share this limiter.
 
-## Plugin pages
-
-- `Game`: full-screen 480 × 720 gameplay presentation.
-- `Controls`: neutral-grey page and structural chrome for consistent appearance across Q-SYS Designer themes, with distinct functional colors retained for Run, Pause, movement, Fire, and AutoFire.
-- `About`: the same explicit neutral-grey page background as Controls, with a clean text-based game description, basic usage guide, control options, version, and project URL. It has no visible GroupBox or card sections.
-
 ## Gameplay
 
 - Easy wave: 5,000 stage points, then Mini Boss 1
