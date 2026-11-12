@@ -139,9 +139,17 @@ Player fire supports up to five rapid shots per burst. A complete burst triggers
 
 ### Gameplay preview
 
-Easy, Medium, and Hard stages:
+#### Easy
 
-![f5Rocket gameplay preview — Easy, Medium, and Hard](docs/gameplay-preview.jpg)
+![f5Rocket gameplay — Easy stage](docs/gameplay-easy.png)
+
+#### Medium
+
+![f5Rocket gameplay — Medium stage](docs/gameplay-medium.png)
+
+#### Hard
+
+![f5Rocket gameplay — Hard stage](docs/gameplay-hard.png)
 
 ## Rendering architecture
 
