@@ -36,11 +36,15 @@ tools/f5Rocket_Keyboard.exe
 
 The helper connects to Q-SYS Designer Emulate through QRC at `127.0.0.1:1710`. It is a development/testing utility only and is not bundled into `f5Rocket.qplug`.
 
-Before using it, set the **Code Name** of the f5Rocket plugin component in Q-SYS Designer to:
+Before using it, configure the f5Rocket plugin component in Q-SYS Designer:
 
-```text
-f5Rocket
-```
+1. Set **Code Name** to:
+
+   ```text
+   f5Rocket
+   ```
+
+2. Set **Script Access** to `All`.
 
 Then:
 
