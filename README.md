@@ -136,6 +136,13 @@ Player fire supports up to five rapid shots per burst. A complete burst triggers
 - Bosses award 2,500, 5,000, and 15,000 points
 - Player death leads to Game Over; defeating the Final Boss leads to Mission Complete
 
+
+### Gameplay preview
+
+Easy, Medium, and Hard stages:
+
+![f5Rocket gameplay preview — Easy, Medium, and Hard](docs/gameplay-preview.svg)
+
 ## Rendering architecture
 
 The plugin uses two aligned Button controls driven by one 30 Hz timer:
