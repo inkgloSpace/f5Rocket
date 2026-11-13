@@ -436,6 +436,7 @@ local function UpdateGameState()
     UpdateEnemies(gameState)
     UpdateEnemyFire(gameState)
   elseif gameState.stagePhase == "BOSS" then
+    UpdateDrainingEnemies(gameState)
     UpdateBoss(gameState)
   end
   UpdateEnemyBullets(gameState)
@@ -443,12 +444,14 @@ local function UpdateGameState()
   if gameState.stagePhase == "WAVE" then
     CheckPlayerBulletEnemyCollisions(gameState)
   elseif gameState.stagePhase == "BOSS" then
+    CheckPlayerBulletEnemyCollisions(gameState)
     CheckPlayerBulletBossCollisions(gameState)
   end
   CheckEnemyBulletPlayerCollisions(gameState)
   if gameState.stagePhase == "WAVE" then
     CheckEnemyPlayerCollisions(gameState)
   elseif gameState.stagePhase == "BOSS" then
+    CheckEnemyPlayerCollisions(gameState)
     CheckBossPlayerCollision(gameState)
   end
 

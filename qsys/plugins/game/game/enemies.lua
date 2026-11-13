@@ -61,6 +61,36 @@ local function UpdateEnemies(state)
   end
 end
 
+-- During boss entry, enemies already visible on screen keep their established
+-- movement but never fire, spawn, or recycle. Each one retires permanently
+-- after leaving the logical viewport.
+local function UpdateDrainingEnemies(state)
+  local profile = GetStageProfile(state)
+  local playerCenterX = state.player.x + state.player.width / 2
+  local maximumX = GAME_CONFIG.LogicalWidth - GAME_CONFIG.EnemyWidth
+
+  for index = 1, GAME_CONFIG.MaxEnemies do
+    local enemy = state.enemies[index]
+    if enemy.active then
+      local enemyCenterX = enemy.x + enemy.width / 2
+      local deltaX = playerCenterX - enemyCenterX
+
+      if deltaX > 0 then
+        enemy.x = enemy.x + math.min(deltaX, profile.EnemySteerSpeed)
+      elseif deltaX < 0 then
+        enemy.x = enemy.x - math.min(-deltaX, profile.EnemySteerSpeed)
+      end
+
+      enemy.x = math.max(0, math.min(maximumX, enemy.x))
+      enemy.y = enemy.y + profile.EnemyVerticalSpeed
+
+      if enemy.y >= GAME_CONFIG.LogicalHeight then
+        enemy.active = false
+      end
+    end
+  end
+end
+
 local function UpdateEnemyFire(state)
   if not state.player.alive then
     return

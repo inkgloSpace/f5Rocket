@@ -31,6 +31,14 @@ local function KillPlayer(state)
   return true
 end
 
+local function RetireOrRecycleEnemy(state, enemy)
+  if state.stagePhase == "WAVE" then
+    RecycleEnemy(state, enemy)
+  else
+    enemy.active = false
+  end
+end
+
 local function CheckPlayerBulletEnemyCollisions(state)
   local profile = GetStageProfile(state)
   for bulletIndex = 1, GAME_CONFIG.MaxPlayerBullets do
@@ -43,7 +51,7 @@ local function CheckPlayerBulletEnemyCollisions(state)
           local explosionY = ExplosionYForObject(enemy)
           bullet.active = false
           SpawnExplosion(state, explosionX, explosionY)
-          RecycleEnemy(state, enemy)
+          RetireOrRecycleEnemy(state, enemy)
           state.score = state.score + profile.EnemyScore
           state.stageScore = state.stageScore + profile.EnemyScore
           break
@@ -101,7 +109,7 @@ local function CheckEnemyPlayerCollisions(state)
 
       if KillPlayer(state) then
         SpawnExplosion(state, explosionX, explosionY)
-        RecycleEnemy(state, enemy)
+        RetireOrRecycleEnemy(state, enemy)
       end
       return
     end

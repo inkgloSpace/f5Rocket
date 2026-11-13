@@ -7,8 +7,8 @@
 
 PluginInfo = {
   Name = "f5Rocket",
-  Version = "0.6.9",
-  BuildVersion = "0.6.9.0",
+  Version = "1.0.0",
+  BuildVersion = "1.0.0.0",
   Id = "fdb75e48-50b5-5b21-8104-5da52ab51f13",
   Author = "inkgloSpace",
   Description = "Semi-8-bit vertical arcade shooter for Q-SYS"
@@ -1453,8 +1453,17 @@ if Controls then
 
   local function BeginBossPhase(state)
     state.stagePhase = "BOSS"
-    DeactivateOrdinaryEnemies(state)
-    DeactivateEnemyBullets(state)
+
+    -- Keep only ordinary enemies that are already at least partially visible.
+    -- Enemies waiting above the viewport must not enter after the boss arrives.
+    for index = 1, GAME_CONFIG.MaxEnemies do
+      local enemy = state.enemies[index]
+      if enemy.active and
+          (enemy.y + enemy.height <= 0 or
+           enemy.y >= GAME_CONFIG.LogicalHeight) then
+        enemy.active = false
+      end
+    end
   end
 
   local function BeginStageClear(state)
@@ -1713,6 +1722,36 @@ if Controls then
 
         if enemy.y > GAME_CONFIG.LogicalHeight then
           RecycleEnemy(state, enemy)
+        end
+      end
+    end
+  end
+
+  -- During boss entry, enemies already visible on screen keep their established
+  -- movement but never fire, spawn, or recycle. Each one retires permanently
+  -- after leaving the logical viewport.
+  local function UpdateDrainingEnemies(state)
+    local profile = GetStageProfile(state)
+    local playerCenterX = state.player.x + state.player.width / 2
+    local maximumX = GAME_CONFIG.LogicalWidth - GAME_CONFIG.EnemyWidth
+
+    for index = 1, GAME_CONFIG.MaxEnemies do
+      local enemy = state.enemies[index]
+      if enemy.active then
+        local enemyCenterX = enemy.x + enemy.width / 2
+        local deltaX = playerCenterX - enemyCenterX
+
+        if deltaX > 0 then
+          enemy.x = enemy.x + math.min(deltaX, profile.EnemySteerSpeed)
+        elseif deltaX < 0 then
+          enemy.x = enemy.x - math.min(-deltaX, profile.EnemySteerSpeed)
+        end
+
+        enemy.x = math.max(0, math.min(maximumX, enemy.x))
+        enemy.y = enemy.y + profile.EnemyVerticalSpeed
+
+        if enemy.y >= GAME_CONFIG.LogicalHeight then
+          enemy.active = false
         end
       end
     end
@@ -2001,6 +2040,14 @@ if Controls then
     return true
   end
 
+  local function RetireOrRecycleEnemy(state, enemy)
+    if state.stagePhase == "WAVE" then
+      RecycleEnemy(state, enemy)
+    else
+      enemy.active = false
+    end
+  end
+
   local function CheckPlayerBulletEnemyCollisions(state)
     local profile = GetStageProfile(state)
     for bulletIndex = 1, GAME_CONFIG.MaxPlayerBullets do
@@ -2013,7 +2060,7 @@ if Controls then
             local explosionY = ExplosionYForObject(enemy)
             bullet.active = false
             SpawnExplosion(state, explosionX, explosionY)
-            RecycleEnemy(state, enemy)
+            RetireOrRecycleEnemy(state, enemy)
             state.score = state.score + profile.EnemyScore
             state.stageScore = state.stageScore + profile.EnemyScore
             break
@@ -2071,7 +2118,7 @@ if Controls then
 
         if KillPlayer(state) then
           SpawnExplosion(state, explosionX, explosionY)
-          RecycleEnemy(state, enemy)
+          RetireOrRecycleEnemy(state, enemy)
         end
         return
       end
@@ -2875,6 +2922,7 @@ if Controls then
       UpdateEnemies(gameState)
       UpdateEnemyFire(gameState)
     elseif gameState.stagePhase == "BOSS" then
+      UpdateDrainingEnemies(gameState)
       UpdateBoss(gameState)
     end
     UpdateEnemyBullets(gameState)
@@ -2882,12 +2930,14 @@ if Controls then
     if gameState.stagePhase == "WAVE" then
       CheckPlayerBulletEnemyCollisions(gameState)
     elseif gameState.stagePhase == "BOSS" then
+      CheckPlayerBulletEnemyCollisions(gameState)
       CheckPlayerBulletBossCollisions(gameState)
     end
     CheckEnemyBulletPlayerCollisions(gameState)
     if gameState.stagePhase == "WAVE" then
       CheckEnemyPlayerCollisions(gameState)
     elseif gameState.stagePhase == "BOSS" then
+      CheckEnemyPlayerCollisions(gameState)
       CheckBossPlayerCollision(gameState)
     end
 

@@ -190,4 +190,8 @@ asset_map.json                           Machine-readable asset/runtime metadata
 README_ASSETS.txt                        Human-readable asset inventory
 ```
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
 See [qsys/README.md](qsys/README.md) for source-module and Q-SYS validation details.

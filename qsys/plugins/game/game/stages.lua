@@ -56,8 +56,17 @@ end
 
 local function BeginBossPhase(state)
   state.stagePhase = "BOSS"
-  DeactivateOrdinaryEnemies(state)
-  DeactivateEnemyBullets(state)
+
+  -- Keep only ordinary enemies that are already at least partially visible.
+  -- Enemies waiting above the viewport must not enter after the boss arrives.
+  for index = 1, GAME_CONFIG.MaxEnemies do
+    local enemy = state.enemies[index]
+    if enemy.active and
+        (enemy.y + enemy.height <= 0 or
+         enemy.y >= GAME_CONFIG.LogicalHeight) then
+      enemy.active = false
+    end
+  end
 end
 
 local function BeginStageClear(state)
